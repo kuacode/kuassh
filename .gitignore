@@ -1,0 +1,35 @@
+# Created by .ignore support plugin (hsz.mobi)
+### Go template
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+.idea/.gitignore
+.idea/gossh.iml
+.idea/misc.xml
+.idea/modules.xml
+__debug_bin
+__debug_bin~
+#_example/
+#client.go
+#cmd/
+#go.mod
+#go.sum
+#kssh.yaml
+#sftp.go
+#ssh.go
+#ssh_test.go
+#vendor/
+/.idea/
