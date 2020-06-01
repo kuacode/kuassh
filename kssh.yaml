@@ -34,18 +34,18 @@
         - name: 本地
           user: root
           host: 127.0.0.1
-          port: 2222
+          port: 2233
           password: 'admin'
 
     - name: 本地
       user: root
       host: 127.0.0.1
-      port: 2222
+      port: 2233
       password: 'admin'
 - name: 本地
   user: root
   host: 127.0.0.1
-  port: 2222
+  port: 2233
   password: 'admin'
 
 - name: VPN

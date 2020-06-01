@@ -395,10 +395,10 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 		clearScreen(sb)
 	} else {
 		sb.Reset()
-		//
-		s.clearHistorySelected()
-		//
-		sb.Write(render(s.Templates.selected, item))
+		// 改写方法
+		s.clearHistorySelected(sb)
+		// 注释源码
+		// sb.Write(render(s.Templates.selected, item))
 		sb.Flush()
 	}
 
@@ -642,14 +642,31 @@ func clearScreen(sb *screenbuf.ScreenBuf) {
 	sb.Flush()
 }
 
+/***************************** 改下方法 ******************************/
+// 保留选择历史个数
 var count = 0
+var bufSelected [][]byte
 
-func (s *Select) clearHistorySelected() {
-	if s.HistorySelectedCount != 0 && count > s.HistorySelectedCount {
-		fmt.Print(fmt.Sprintf("\033[%dA", s.HistorySelectedCount+1)) // 上移2行
-		fmt.Print("\x1b[2k")                                         // 清除一行
-		fmt.Print(fmt.Sprintf("\033[%dB", s.HistorySelectedCount))   // 下移一行
+// 添加方法
+func (s *Select) clearHistorySelected(sb *screenbuf.ScreenBuf) {
+	items, idx := s.list.Items()
+	item := items[idx]
+	bs := render(s.Templates.selected, item)
+
+	if s.HistorySelectedCount != 0 && count == s.HistorySelectedCount {
+		bufSelected = append(bufSelected[1:], bs)
+		fmt.Print(fmt.Sprintf("\033[%dA", s.HistorySelectedCount))
+		for i := 0; i < len(bufSelected); i++ {
+			sb.Write(bufSelected[i])
+			// fmt.Println(string(bufSelected[i]))
+		}
+		//fmt.Print(fmt.Sprintf("\033[%dA", s.HistorySelectedCount+1)) // 上移2行
+		//fmt.Print("\x1b[2k")                                         // 清除一行
+		//fmt.Print(fmt.Sprintf("\033[%dB", s.HistorySelectedCount))   // 下移一行
 	} else {
 		count++
+		sb.Clear()
+		bufSelected = append(bufSelected, bs)
+		sb.Write(bs)
 	}
 }

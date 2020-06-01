@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/manifoldco/promptui"
-	"github.com/spf13/cobra"
 	"kuassh"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/manifoldco/promptui"
+	"github.com/spf13/cobra"
 )
 
 var ksshCmd = &cobra.Command{
@@ -59,6 +60,7 @@ var templates = &promptui.SelectTemplates{
 	Label:    "✨ {{ . | green}}",
 	Active:   "➤ {{ .Name | cyan  }}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
 	Inactive: "  {{.Name | faint}}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
+	Selected: "\U0001F336 {{ .Name | green }}",
 }
 
 // 光标位置
