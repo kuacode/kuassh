@@ -29,15 +29,14 @@
 
 - name: 组...
   children:
-    - name: 本地
-      children: 
-        - name: 本地
-          user: root
-          host: 127.0.0.1
-          port: 2233
-          password: 'admin'
+    - name: 本地10
+      children:
+        - name: 本地2
+          children:
+            - {name: 本地21,user: root,host: 127.0.0.1,port: 2233,password: 'admin'}
+            - {name: 本地22,user: root,host: 127.0.0.1,port: 2233,password: 'admin'}
 
-    - name: 本地
+    - name: 本地11
       user: root
       host: 127.0.0.1
       port: 2233

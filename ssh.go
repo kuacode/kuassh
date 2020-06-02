@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -83,10 +84,52 @@ func NewClient(n *Node) (*client, error) {
 }
 
 func (c *client) Login() {
+	var err error
+	var sshClient *ssh.Client
+	host := c.Node.Host
+	port := c.Node.Port
 	//
-	sshClient, err := ssh.Dial("tcp", net.JoinHostPort(c.Node.Host, c.Node.Port), c.SSHClientConf)
-	if err != nil {
-		log.Fatal("tcp:", err)
+	jn := c.Node.Jump
+	if len(jn) > 0 {
+		jnc, err := NewClient(jn[0])
+		if err != nil {
+			log.Fatal("创建jump节点错误:", err)
+		}
+		proxyClient, err := ssh.Dial("tcp", net.JoinHostPort(jnc.Node.Host, jnc.Node.Port), jnc.SSHClientConf)
+		if err != nil {
+			log.Fatal(err)
+		}
+		conn, err := proxyClient.Dial("tcp", net.JoinHostPort(host, port))
+		if err != nil {
+			log.Fatal(err)
+		}
+		ncc, chans, reqs, err := ssh.NewClientConn(conn, net.JoinHostPort(host, port), c.SSHClientConf)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sshClient = ssh.NewClient(ncc, chans, reqs)
+	} else {
+		sshClient, err = ssh.Dial("tcp", net.JoinHostPort(c.Node.Host, c.Node.Port), c.SSHClientConf)
+		if err != nil {
+			msg := err.Error()
+			// use terminal password retry
+			if strings.Contains(msg, "no supported methods remain") && !strings.Contains(msg, "password") {
+				fmt.Printf("%s@%s's password:", c.Node.User, host)
+				var b []byte
+				b, err = terminal.ReadPassword(int(syscall.Stdin))
+				if err == nil {
+					p := string(b)
+					if p != "" {
+						c.SSHClientConf.Auth = append(c.SSHClientConf.Auth, ssh.Password(p))
+					}
+					fmt.Println()
+					sshClient, err = ssh.Dial("tcp", net.JoinHostPort(host, port), c.SSHClientConf)
+				}
+			}
+		}
+		if err != nil {
+			log.Fatal("登陆错误:", err)
+		}
 	}
 	defer sshClient.Close()
 	//

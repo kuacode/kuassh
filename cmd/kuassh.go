@@ -56,12 +56,14 @@ func run() {
 //{{ "Port:" | faint }}	{{ .Port }}
 //`,
 //}
-var templates = &promptui.SelectTemplates{
-	Label:    "✨ {{ . | green}}",
-	Active:   "➤ {{ .Name | cyan  }}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
-	Inactive: "  {{.Name | faint}}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
-	Selected: "\U0001F336 {{ .Name | green }}",
-}
+var (
+	templates = &promptui.SelectTemplates{
+		Label:    "✨ {{ . | green}}",
+		Active:   "➤ {{ .Name | cyan  }}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
+		Inactive: "  {{.Name | faint}}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
+		Selected: "\U0001F336 {{ .Name | green }}",
+	}
+)
 
 // 光标位置
 var cursor = 0
