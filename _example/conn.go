@@ -1,6 +1,6 @@
 package main
 
-import "kuassh/cmd"
+import "github.com/kuassh/cmd"
 
 func main() {
 	//n := &kuassh.Node{

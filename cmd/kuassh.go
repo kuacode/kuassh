@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"kuassh"
+	"github.com/kuassh"
+	"github.com/kuassh/ssh"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/manifoldco/promptui"
+	"github.com/kuassh/pkg/promptui"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +37,7 @@ func run() {
 	nodes := kuassh.GetConfig()
 	//
 	node := selectNode(nil, nodes)
-	c, err := kuassh.NewClient(node)
+	c, err := ssh.NewClient(node)
 	if err != nil {
 		log.Fatalln("获取客户端错误:", err)
 	}

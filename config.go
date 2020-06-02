@@ -20,8 +20,7 @@ type Node struct {
 	NeedAuth bool        `yaml:"needauth"`
 	Jump     []*Node     `yaml:"jump"`
 	Cmds     []*ShellCmd `yaml:"cmds"`
-	Parent   []*Node
-	Children []*Node `yaml:"children"`
+	Children []*Node     `yaml:"children"`
 }
 type ShellCmd struct {
 	Cmd   string        `yaml:"cmd"`

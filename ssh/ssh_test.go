@@ -1,9 +1,12 @@
-package kuassh
+package ssh
 
-import "testing"
+import (
+	"github.com/kuassh"
+	"testing"
+)
 
 func TestNewClient(t *testing.T) {
-	n := &Node{
+	n := &kuassh.Node{
 		Host:     "149.28.25.177",
 		Port:     "22",
 		User:     "root",

@@ -1,7 +1,8 @@
-package kuassh
+package ssh
 
 import (
 	"fmt"
+	"github.com/kuassh"
 	"github.com/nsf/termbox-go"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
@@ -36,13 +37,13 @@ var (
 )
 
 type client struct {
-	Node          *Node
+	Node          *kuassh.Node
 	SSHClientConf *ssh.ClientConfig
 	Session       *ssh.Session
 	osName        string
 }
 
-func NewClient(n *Node) (*client, error) {
+func NewClient(n *kuassh.Node) (*client, error) {
 	auth := make([]ssh.AuthMethod, 0)
 
 	if n.KeyFile != "" {
