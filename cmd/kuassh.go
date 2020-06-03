@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kuassh"
 	"github.com/kuassh/ssh"
+	"github.com/mattn/go-tty"
 	"log"
 	"os"
 	"strings"
@@ -36,7 +37,12 @@ func run() {
 	// 获取节点
 	nodes := kuassh.GetConfig()
 	//
-	node := selectNode(nil, nodes)
+	_tty, err := tty.Open()
+	defer _tty.Close()
+	if err != nil {
+		log.Fatalln("tty创建错误:", err)
+	}
+	node := selectNode(nil, nodes, _tty)
 	c, err := ssh.NewClient(node)
 	if err != nil {
 		log.Fatalln("获取客户端错误:", err)
@@ -66,23 +72,10 @@ var (
 	}
 )
 
-// 光标位置
-var cursor = 0
-
-func clearSelectedBuf() {
-	if cursor != 0 && cursor%2 == 0 {
-		fmt.Print("\033[2A") // 上移2行
-		fmt.Print("\x1b[2k") // 清除一行
-		fmt.Print("\033[1B") // 下移一行
-	} else {
-		cursor += 1
-	}
-}
-
 // 上级目录
 const prev = "--parent--"
 
-func selectNode(parent, nodes []*kuassh.Node) *kuassh.Node {
+func selectNode(parent, nodes []*kuassh.Node, t *tty.TTY) *kuassh.Node {
 	// 终端选择 UI
 	prompt := promptui.Select{
 		Label:     "服务器列表",
@@ -91,6 +84,8 @@ func selectNode(parent, nodes []*kuassh.Node) *kuassh.Node {
 		Size:      20,
 		//HideSelected: true, // 隐藏选择后顶部显示
 		HistorySelectedCount: 2,
+		Stdin:                t.Input(),
+		Stdout:               t.Output(),
 		Searcher: func(input string, index int) bool {
 			n := nodes[index]
 			content := fmt.Sprintf("%s %s %s", n.Name, n.User, n.Host)
@@ -129,13 +124,13 @@ func selectNode(parent, nodes []*kuassh.Node) *kuassh.Node {
 			prevNode := &kuassh.Node{Name: prev}
 			node.Children = append([]*kuassh.Node{prevNode}, node.Children...)
 		}
-		return selectNode(nodes, node.Children)
+		return selectNode(nodes, node.Children, t)
 	}
 	if node.Name == prev {
 		if parent == nil {
-			return selectNode(nil, kuassh.GetConfig())
+			return selectNode(nil, kuassh.GetConfig(), t)
 		}
-		return selectNode(nil, parent)
+		return selectNode(nil, parent, t)
 	}
 	return node
 }
