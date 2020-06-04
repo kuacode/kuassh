@@ -7,10 +7,10 @@ import (
 	"os"
 	"text/template"
 
+	"github.com/chzyer/readline"
 	"github.com/juju/ansiterm"
 	"github.com/kuassh/pkg/promptui/list"
 	"github.com/kuassh/pkg/promptui/screenbuf"
-	"github.com/kuassh/pkg/readline"
 )
 
 // SelectedAdd is used internally inside SelectWithAdd when the add option is selected in select mode.

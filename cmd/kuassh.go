@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/kuassh"
 	kssh "github.com/kuassh/ssh"
-	"github.com/mattn/go-tty"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -33,13 +32,7 @@ func runSSH() {
 	}
 	// 获取节点
 	nodes := kuassh.GetConfig()
-	//
-	_tty, err := tty.Open()
-	defer _tty.Close()
-	if err != nil {
-		log.Fatalln("tty创建错误:", err)
-	}
-	node := kuassh.SelectNode(nil, nodes, _tty)
+	node := kuassh.SelectNode(nil, nodes)
 	c, err := kssh.NewClient(node)
 	if err != nil {
 		log.Fatalln("获取客户端错误:", err)

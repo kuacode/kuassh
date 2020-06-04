@@ -1,8 +1,9 @@
-// +build !windows
+//+build !windows
 
+// windows正常运行
 package promptui
 
-import "github.com/kuassh/pkg/readline"
+import "github.com/chzyer/readline"
 
 // These runes are used to identify the commands entered by the user in the command prompt. They map
 // to specific actions of promptui in prompt mode and can be remapped if necessary.

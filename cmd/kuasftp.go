@@ -40,7 +40,7 @@ func runSFTP() {
 	if err != nil {
 		log.Fatalln("tty创建错误:", err)
 	}
-	node := kuassh.SelectNode(nil, nodes, _tty)
+	node := kuassh.SelectNode(nil, nodes)
 	c, err := kssh.NewClient(node)
 	if err != nil {
 		log.Fatalln("获取客户端错误:", err)

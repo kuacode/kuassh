@@ -1,6 +1,3 @@
-# github.com/c-bata/go-prompt v0.2.3
-## explicit
-github.com/c-bata/go-prompt
 # github.com/chzyer/logex v1.1.10
 ## explicit
 # github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
@@ -14,6 +11,8 @@ github.com/inconshreveable/mousetrap
 ## explicit
 github.com/juju/ansiterm
 github.com/juju/ansiterm/tabwriter
+# github.com/kr/fs v0.1.0
+github.com/kr/fs
 # github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a
 ## explicit
 github.com/lunixbochs/vtclean
@@ -31,6 +30,11 @@ github.com/mattn/go-tty
 # github.com/nsf/termbox-go v0.0.0-20200418040025-38ba6e5628f1
 ## explicit
 github.com/nsf/termbox-go
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors
+# github.com/pkg/sftp v1.11.0
+## explicit
+github.com/pkg/sftp
 # github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03
 ## explicit
 github.com/pkg/term/termios

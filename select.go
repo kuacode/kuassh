@@ -3,7 +3,6 @@ package kuassh
 import (
 	"fmt"
 	"github.com/kuassh/pkg/promptui"
-	"github.com/mattn/go-tty"
 	"log"
 	"os"
 	"strings"
@@ -34,7 +33,7 @@ var (
 // 上级目录
 const prev = "--parent--"
 
-func SelectNode(parent, nodes []*Node, t *tty.TTY) *Node {
+func SelectNode(parent, nodes []*Node) *Node {
 	// 终端选择 UI
 	prompt := promptui.Select{
 		Label:     "服务器列表",
@@ -43,8 +42,8 @@ func SelectNode(parent, nodes []*Node, t *tty.TTY) *Node {
 		Size:      20,
 		//HideSelected: true, // 隐藏选择后顶部显示
 		HistorySelectedCount: 2,
-		Stdin:                t.Input(),
-		Stdout:               t.Output(),
+		//Stdin:                t.Input(),
+		//Stdout:               t.Output(),
 		Searcher: func(input string, index int) bool {
 			n := nodes[index]
 			content := fmt.Sprintf("%s %s %s", n.Name, n.User, n.Host)
@@ -83,13 +82,13 @@ func SelectNode(parent, nodes []*Node, t *tty.TTY) *Node {
 			prevNode := &Node{Name: prev}
 			node.Children = append([]*Node{prevNode}, node.Children...)
 		}
-		return SelectNode(nodes, node.Children, t)
+		return SelectNode(nodes, node.Children)
 	}
 	if node.Name == prev {
 		if parent == nil {
-			return SelectNode(nil, GetConfig(), t)
+			return SelectNode(nil, GetConfig())
 		}
-		return SelectNode(nil, parent, t)
+		return SelectNode(nil, parent)
 	}
 	return node
 }

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/chzyer/readline"
 	"github.com/kuassh/pkg/promptui/screenbuf"
-	"github.com/kuassh/pkg/readline"
 )
 
 // Prompt represents a single line text field input with options for validation and input masks.
