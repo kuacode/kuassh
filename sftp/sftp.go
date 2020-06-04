@@ -1,8 +1,8 @@
 package sftp
 
 import (
-	//"github.com/kuassh/pkg/go-prompt"
-	"github.com/c-bata/go-prompt"
+	"github.com/kuassh/pkg/go-prompt"
+	//"github.com/c-bata/go-prompt"
 )
 
 type sftpClient struct {

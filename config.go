@@ -39,8 +39,8 @@ func GetConfig() []*Node {
 	return configs
 }
 
-func LoadConfig(names []string) error {
-	b, err := LoadConfigBytes(names...)
+func LoadConfig() error {
+	b, err := LoadConfigBytes("kssh.yaml", ".kssh.yaml")
 	if err != nil {
 		return err
 	}

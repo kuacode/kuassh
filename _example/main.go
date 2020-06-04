@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"os"
 	"time"
 
+	"github.com/mattn/go-tty"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -15,10 +16,13 @@ func main() {
 			log.Fatalf("%s error: %v", msg, err)
 		}
 	}
-
-	client, err := ssh.Dial("tcp", "149.28.25.177:22", &ssh.ClientConfig{
+	t, err := tty.Open()
+	if err != nil {
+		log.Fatal(err)
+	}
+	client, err := ssh.Dial("tcp", "127.0.0.1:2233", &ssh.ClientConfig{
 		User: "root",
-		Auth: []ssh.AuthMethod{ssh.Password("%9aA-jR1[973FBn$")},
+		Auth: []ssh.AuthMethod{ssh.Password("admin")},
 		//需要验证服务端，不做验证返回nil就可以，点击HostKeyCallback看源码就知道了
 		// HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 		// 	return nil
@@ -30,16 +34,25 @@ func main() {
 	session, err := client.NewSession()
 	check(err, "new session")
 	defer session.Close()
-	fd := int(os.Stdin.Fd())
+	fd := int(t.Input().Fd())
 	state, err := terminal.MakeRaw(fd)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer terminal.Restore(fd, state)
-	w, h, err := terminal.GetSize(fd)
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
+
+	ofd := int(t.Output().Fd())
+	w, h, err := terminal.GetSize(ofd)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//session.Stdout = os.Stdout
+	//session.Stderr = os.Stderr
+	//session.Stdin = os.Stdin
+	session.Stdout = t.Output()
+	session.Stderr = t.Output()
+	//session.Stdin = t.Input()
+	stdinPipe, _ := session.StdinPipe()
 
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,     // 禁用回显（0禁用，1启动）
@@ -53,25 +66,35 @@ func main() {
 	check(err, "start shell")
 
 	go func() {
-		var (
-			ow = w
-			oh = h
-		)
+		for ws := range t.SIGWINCH() {
+			session.WindowChange(ws.H, ws.W)
+		}
+	}()
+
+	clean, err := t.Raw()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer clean()
+	go func() {
+
+		bs := make([]byte, 128)
 		for {
-			cw, ch, err := terminal.GetSize(fd)
+			n, err := t.Input().Read(bs)
 			if err != nil {
-				break
+				continue
+			}
+			if n == 0 {
+				r, err := t.ReadRune()
+				if err != nil || r == 0 {
+					continue
+				}
+				session.Stdout.Write([]byte(fmt.Sprint(r)))
+			} else {
+				stdinPipe.Write(bs[:n])
 			}
 
-			if cw != ow || ch != oh {
-				err = session.WindowChange(ch, cw)
-				if err != nil {
-					break
-				}
-				ow = cw
-				oh = ch
-			}
-			time.Sleep(time.Second)
+			//s, _ := t.ReadString()
 		}
 	}()
 

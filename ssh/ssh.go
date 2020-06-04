@@ -83,7 +83,7 @@ func NewClient(n *kuassh.Node) (*client, error) {
 	return c, nil
 }
 
-func (c *client) Login() {
+func (c *client) Login() *ssh.Client {
 	var err error
 	var sshClient *ssh.Client
 	host := c.Node.Host
@@ -182,11 +182,10 @@ func (c *client) Login() {
 	if err != nil {
 		log.Fatal("RequestPty", err)
 	}
-	// 开始会话
-	c.startSession()
+	return sshClient
 }
 
-func (c *client) startSession() {
+func (c *client) StartSession() {
 	// 重定向输入输出
 	//session.Stdout = os.Stdout
 	//session.Stderr = os.Stderr

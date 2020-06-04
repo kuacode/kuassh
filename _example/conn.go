@@ -13,5 +13,5 @@ func main() {
 	//}
 	//newClient, _ := kuassh.NewClient(n)
 	//newClient.Login()
-	cmd.Execute()
+	cmd.SSHExecute()
 }
