@@ -1,6 +1,5 @@
-//+build !windows
+// windows正常运行 -- 先注释掉之 //+build !windows（平台编译注释）
 
-// windows正常运行
 package promptui
 
 import "github.com/chzyer/readline"

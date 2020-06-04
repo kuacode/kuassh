@@ -38,7 +38,7 @@ var (
 type client struct {
 	Node          *kuassh.Node
 	SSHClientConf *ssh.ClientConfig
-	Session       *ssh.Session
+	SSHClient     *ssh.Client
 	osName        string
 }
 
@@ -85,7 +85,6 @@ func NewClient(n *kuassh.Node) (*client, error) {
 
 func (c *client) Login() *ssh.Client {
 	var err error
-	var sshClient *ssh.Client
 	host := c.Node.Host
 	port := c.Node.Port
 	//
@@ -107,20 +106,26 @@ func (c *client) Login() *ssh.Client {
 		if err != nil {
 			log.Fatal(err)
 		}
-		sshClient = ssh.NewClient(ncc, chans, reqs)
+		c.SSHClient = ssh.NewClient(ncc, chans, reqs)
 	} else {
-		sshClient, err = ssh.Dial("tcp", net.JoinHostPort(c.Node.Host, c.Node.Port), c.SSHClientConf)
+		c.SSHClient, err = ssh.Dial("tcp", net.JoinHostPort(c.Node.Host, c.Node.Port), c.SSHClientConf)
 		if err != nil {
 			log.Fatal("登陆错误:", err)
 		}
 	}
-	defer sshClient.Close()
+
+	//c.StartSession()
+	return c.SSHClient
+}
+
+func (c *client) StartSession() {
+	defer c.SSHClient.Close()
 	//
-	c.Session, err = sshClient.NewSession()
+	s, err := c.SSHClient.NewSession()
 	if err != nil {
 		log.Fatal("NewSession:", err)
 	}
-	defer c.Session.Close()
+	defer s.Close()
 	// 拿到当前终端文件描述符
 	fd := int(os.Stdin.Fd())
 	state, err := terminal.MakeRaw(fd)
@@ -156,7 +161,7 @@ func (c *client) Login() *ssh.Client {
 			}
 			// 窗口大小发生变化
 			if currentW != newW || currentH != newH {
-				err = c.Session.WindowChange(newH, newW)
+				err = s.WindowChange(newH, newW)
 				if err != nil {
 					break
 				}
@@ -177,21 +182,18 @@ func (c *client) Login() *ssh.Client {
 		termType = "xterm-256color"
 	}
 	// request pty
-	err = c.Session.RequestPty(termType, h, w, modes)
+	err = s.RequestPty(termType, h, w, modes)
 	//err = session.RequestPty("xterm", h, w, modes)
 	if err != nil {
 		log.Fatal("RequestPty", err)
 	}
-	return sshClient
-}
 
-func (c *client) StartSession() {
 	// 重定向输入输出
 	//session.Stdout = os.Stdout
 	//session.Stderr = os.Stderr
 	//session.Stdin = os.Stdin
 	// 直接对接了 stderr、stdout 和 stdin 会造成 tmux等出问题 ，实际上我们应当启动一个异步的管道式复制行为
-	stdoutPipe, err := c.Session.StdoutPipe()
+	stdoutPipe, err := s.StdoutPipe()
 	if err != nil {
 		log.Fatal("StdoutPipe", err)
 	}
@@ -199,7 +201,7 @@ func (c *client) StartSession() {
 		_, _ = io.Copy(os.Stdout, r)
 	}(stdoutPipe)
 	//
-	stderrPipe, err := c.Session.StderrPipe()
+	stderrPipe, err := s.StderrPipe()
 	if err != nil {
 		log.Fatal("StderrPipe", err)
 	}
@@ -207,7 +209,7 @@ func (c *client) StartSession() {
 		_, _ = io.Copy(os.Stderr, r)
 	}(stderrPipe)
 
-	stdinPipe, err := c.Session.StdinPipe()
+	stdinPipe, err := s.StdinPipe()
 	if err != nil {
 		log.Fatal("StdinPipe", err)
 	}
@@ -229,7 +231,7 @@ func (c *client) StartSession() {
 	}(stdinPipe)
 
 	// 开启shell
-	err = c.Session.Shell()
+	err = s.Shell()
 	if err != nil {
 		log.Fatal("Shell", err)
 	}
@@ -247,9 +249,9 @@ func (c *client) StartSession() {
 			// 保持连接
 			s.SendRequest("keepalive", true, nil)
 		}
-	}(c.Session)
+	}(s)
 	// 等待shell
-	err = c.Session.Wait()
+	err = s.Wait()
 	if err != nil {
 		log.Fatal("Wait", err)
 	}
