@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"time"
-
 	"github.com/mattn/go-tty"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
+	"log"
+	"os"
+	"time"
 )
 
 func main() {
@@ -16,10 +15,7 @@ func main() {
 			log.Fatalf("%s error: %v", msg, err)
 		}
 	}
-	t, err := tty.Open()
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	client, err := ssh.Dial("tcp", "127.0.0.1:2233", &ssh.ClientConfig{
 		User: "root",
 		Auth: []ssh.AuthMethod{ssh.Password("admin")},
@@ -34,15 +30,23 @@ func main() {
 	session, err := client.NewSession()
 	check(err, "new session")
 	defer session.Close()
-	fd := int(t.Input().Fd())
-	state, err := terminal.MakeRaw(fd)
+	//
+	t, err := tty.Open()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer terminal.Restore(fd, state)
+	//fd := int(t.Input().Fd())
+	//state, err := terminal.MakeRaw(fd)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//defer terminal.Restore(fd, state)
 
-	ofd := int(t.Output().Fd())
+	//ofd := int(t.Output().Fd())
+	ofd := int(os.Stdout.Fd())
 	w, h, err := terminal.GetSize(ofd)
+	ws, hs, err := t.Size()
+	log.Println(ws, hs)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,7 +55,6 @@ func main() {
 	//session.Stdin = os.Stdin
 	session.Stdout = t.Output()
 	session.Stderr = t.Output()
-	//session.Stdin = t.Input()
 	stdinPipe, _ := session.StdinPipe()
 
 	modes := ssh.TerminalModes{
@@ -71,28 +74,30 @@ func main() {
 		}
 	}()
 
-	clean, err := t.Raw()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer clean()
+	//clean, err := t.Raw()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//defer clean()
 	go func() {
-
-		bs := make([]byte, 128)
+		//bs := make([]byte, 128)
+		//rs := []rune{}
 		for {
-			n, err := t.Input().Read(bs)
-			if err != nil {
+			//n, err := t.Input().Read(bs)
+			//
+			//if err != nil {
+			//	continue
+			//}
+			//stdinPipe.Write(bs[:n])
+			r, _ := t.ReadRune()
+			if r == 0 {
 				continue
 			}
-			if n == 0 {
-				r, err := t.ReadRune()
-				if err != nil || r == 0 {
-					continue
-				}
-				session.Stdout.Write([]byte(fmt.Sprint(r)))
-			} else {
-				stdinPipe.Write(bs[:n])
-			}
+			stdinPipe.Write([]byte(string(r)))
+			//	session.Stdout.Write([]byte(fmt.Sprint(r)))
+			//} else {
+			//
+			//}
 
 			//s, _ := t.ReadString()
 		}

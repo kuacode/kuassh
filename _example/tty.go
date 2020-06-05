@@ -27,17 +27,28 @@ func main() {
 	defer clean()
 
 	fmt.Println("Hit any key")
+	// buf := make([]byte,128)
 	for {
 		r, err := t.ReadRune()
 		if err != nil {
 			log.Fatal(err)
 		}
-		if r == 0 {
-			continue
+		if r != 0 {
+			fmt.Println(r)
+			if r == 'q' {
+				break
+			}
 		}
+
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+		//if r == 0 {
+		//	continue
+		//}
 		fmt.Printf("0x%X: %c\n", r, r)
-		if !t.Buffered() {
-			break
-		}
+		//if !t.Buffered() {
+		//	break
+		//}
 	}
 }

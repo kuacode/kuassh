@@ -120,125 +120,52 @@ func (c *client) Login() *ssh.Client {
 			log.Fatal("登陆错误:", err)
 		}
 	}
-
 	//c.StartSession()
 	return c.SSHClient
 }
 
-func (c *client) StartSession() {
-	defer c.SSHClient.Close()
-	//
-	var err error
-	c.session, err = c.SSHClient.NewSession()
-	if err != nil {
-		log.Fatal("NewSession:", err)
-	}
-	defer c.session.Close()
-	// 拿到当前终端文件描述符
-	fd := int(os.Stdin.Fd())
-	state, err := terminal.MakeRaw(fd)
-	// 退出还原终端
-	defer terminal.Restore(fd, state)
-	if err != nil {
-		log.Fatal("MakeRaw:", err)
-	}
-	// 终端大小;windows 下获取输出才能正确运行,目前linux和windows下获取输出调整窗口大小正常，暂时不做区分处理
-	var ofd = int(os.Stdout.Fd())
-	// 获取终端大小
-	width, height, err := terminal.GetSize(ofd)
-	if err != nil {
-		log.Fatal("GetSize:", err)
-	}
-	c.win = &terminalWindow{
-		h: height,
-		w: width,
-	}
-	// 监听窗口变化
-	go c.winChange(ofd)
-
+func (c *client) requestPty() {
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,     // 禁用回显（0禁用，1启动）
 		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
 		ssh.TTY_OP_OSPEED: 14400, //output speed = 14.4kbaud
 	}
 	// default to xterm-256color
-	termType := os.Getenv("TERM")
+	termType := os.Getenv("xterm")
 	if termType == "" {
 		termType = "xterm-256color"
 	}
 	// request pty
-	err = c.session.RequestPty(termType, c.win.h, c.win.w, modes)
+	err := c.session.RequestPty(termType, c.win.h, c.win.w, modes)
 	//err = session.RequestPty("xterm", h, w, modes)
 	if err != nil {
 		log.Fatal("RequestPty", err)
 	}
+}
 
-	// 重定向输入输出
-	//session.Stdout = os.Stdout
-	//session.Stderr = os.Stderr
-	//session.Stdin = os.Stdin
-	// 直接对接了 stderr、stdout 和 stdin 会造成 tmux等出问题 ，实际上我们应当启动一个异步的管道式复制行为
-	stdoutPipe, err := c.session.StdoutPipe()
-	if err != nil {
-		log.Fatal("StdoutPipe", err)
-	}
-	go func(r io.Reader) {
-		_, _ = io.Copy(os.Stdout, r)
-	}(stdoutPipe)
-	//
-	stderrPipe, err := c.session.StderrPipe()
-	if err != nil {
-		log.Fatal("StderrPipe", err)
-	}
-	go func(r io.Reader) {
-		_, _ = io.Copy(os.Stderr, r)
-	}(stderrPipe)
-
-	stdinPipe, err := c.session.StdinPipe()
-	if err != nil {
-		log.Fatal("StdinPipe", err)
-	}
-	// 系统终端输入拷贝到远程终端执行
-	go func(w io.Writer) {
-		buf := make([]byte, 128)
-		for {
-			n, err := os.Stdin.Read(buf)
-			if err != nil {
-				log.Fatal("终端读取命令错误:", err)
-			}
-			if n > 0 {
-				_, err = w.Write(buf[:n])
-				if err != nil {
-					log.Fatal("发送命令错误:", err)
-				}
-			}
-		}
-	}(stdinPipe)
-
-	// 开启shell
-	err = c.session.Shell()
-	if err != nil {
-		log.Fatal("Shell", err)
-	}
+func (c *client) runCmds(w io.Writer) {
 	// todo 执行初始化命令
 	for i := range c.Node.Cmds {
 		shellCmd := c.Node.Cmds[i]
 		time.Sleep(shellCmd.Delay * time.Millisecond)
-		stdinPipe.Write([]byte(shellCmd.Cmd + "\r"))
+		w.Write([]byte(shellCmd.Cmd + "\r"))
 	}
+}
 
+func (c *client) keepalive() {
 	// 每30s发送一次信号
-	go func(s *ssh.Session) {
-		t := time.Tick(30 * time.Second)
-		for range t {
-			// 保持连接
-			s.SendRequest("keepalive", true, nil)
-		}
-	}(c.session)
-	// 等待shell
-	err = c.session.Wait()
+	t := time.Tick(30 * time.Second)
+	for range t {
+		// 保持连接
+		c.session.SendRequest("keepalive", true, nil)
+	}
+}
+
+func (c *client) shell() {
+	// 开启shell
+	err := c.session.Shell()
 	if err != nil {
-		log.Fatal("Wait", err)
+		log.Fatal("Shell", err)
 	}
 }
 
