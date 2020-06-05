@@ -38,7 +38,7 @@
 
     - name: 本地11
       user: root
-      host: 127.0.0.1
+      host: 192.168.31.98
       port: 2233
       password: 'admin'
 - name: 本地

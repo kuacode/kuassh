@@ -39,7 +39,14 @@ type client struct {
 	Node          *kuassh.Node
 	SSHClientConf *ssh.ClientConfig
 	SSHClient     *ssh.Client
+	session       *ssh.Session
 	osName        string
+	win           *terminalWindow // 窗口
+}
+
+type terminalWindow struct {
+	h int // 高
+	w int // 宽
 }
 
 func NewClient(n *kuassh.Node) (*client, error) {
@@ -121,11 +128,12 @@ func (c *client) Login() *ssh.Client {
 func (c *client) StartSession() {
 	defer c.SSHClient.Close()
 	//
-	s, err := c.SSHClient.NewSession()
+	var err error
+	c.session, err = c.SSHClient.NewSession()
 	if err != nil {
 		log.Fatal("NewSession:", err)
 	}
-	defer s.Close()
+	defer c.session.Close()
 	// 拿到当前终端文件描述符
 	fd := int(os.Stdin.Fd())
 	state, err := terminal.MakeRaw(fd)
@@ -137,39 +145,16 @@ func (c *client) StartSession() {
 	// 终端大小;windows 下获取输出才能正确运行,目前linux和windows下获取输出调整窗口大小正常，暂时不做区分处理
 	var ofd = int(os.Stdout.Fd())
 	// 获取终端大小
-	w, h, err := terminal.GetSize(ofd)
+	width, height, err := terminal.GetSize(ofd)
 	if err != nil {
 		log.Fatal("GetSize:", err)
 	}
+	c.win = &terminalWindow{
+		h: height,
+		w: width,
+	}
 	// 监听窗口变化
-	// 非windows下可以监听信号
-	// sigwinchCh := make(chan os.Signal, 1)
-	// signal.Notify(sigwinchCh, syscall.SIGWINCH)
-	// for {
-	// 	select {
-	//		case sigwinchCh:
-	//			...
-	//	}
-	// }
-	go func(_fd, _w, _h int) {
-		t := time.Tick(time.Second)
-		var currentW, currentH = _w, _h
-		for range t {
-			newW, newH, err := terminal.GetSize(_fd)
-			if err != nil {
-				break
-			}
-			// 窗口大小发生变化
-			if currentW != newW || currentH != newH {
-				err = s.WindowChange(newH, newW)
-				if err != nil {
-					break
-				}
-				currentW = newW
-				currentH = newH
-			}
-		}
-	}(ofd, w, h)
+	go c.winChange(ofd)
 
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,     // 禁用回显（0禁用，1启动）
@@ -182,7 +167,7 @@ func (c *client) StartSession() {
 		termType = "xterm-256color"
 	}
 	// request pty
-	err = s.RequestPty(termType, h, w, modes)
+	err = c.session.RequestPty(termType, c.win.h, c.win.w, modes)
 	//err = session.RequestPty("xterm", h, w, modes)
 	if err != nil {
 		log.Fatal("RequestPty", err)
@@ -193,7 +178,7 @@ func (c *client) StartSession() {
 	//session.Stderr = os.Stderr
 	//session.Stdin = os.Stdin
 	// 直接对接了 stderr、stdout 和 stdin 会造成 tmux等出问题 ，实际上我们应当启动一个异步的管道式复制行为
-	stdoutPipe, err := s.StdoutPipe()
+	stdoutPipe, err := c.session.StdoutPipe()
 	if err != nil {
 		log.Fatal("StdoutPipe", err)
 	}
@@ -201,7 +186,7 @@ func (c *client) StartSession() {
 		_, _ = io.Copy(os.Stdout, r)
 	}(stdoutPipe)
 	//
-	stderrPipe, err := s.StderrPipe()
+	stderrPipe, err := c.session.StderrPipe()
 	if err != nil {
 		log.Fatal("StderrPipe", err)
 	}
@@ -209,7 +194,7 @@ func (c *client) StartSession() {
 		_, _ = io.Copy(os.Stderr, r)
 	}(stderrPipe)
 
-	stdinPipe, err := s.StdinPipe()
+	stdinPipe, err := c.session.StdinPipe()
 	if err != nil {
 		log.Fatal("StdinPipe", err)
 	}
@@ -231,7 +216,7 @@ func (c *client) StartSession() {
 	}(stdinPipe)
 
 	// 开启shell
-	err = s.Shell()
+	err = c.session.Shell()
 	if err != nil {
 		log.Fatal("Shell", err)
 	}
@@ -249,9 +234,9 @@ func (c *client) StartSession() {
 			// 保持连接
 			s.SendRequest("keepalive", true, nil)
 		}
-	}(s)
+	}(c.session)
 	// 等待shell
-	err = s.Wait()
+	err = c.session.Wait()
 	if err != nil {
 		log.Fatal("Wait", err)
 	}
