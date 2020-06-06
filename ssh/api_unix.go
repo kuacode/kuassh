@@ -4,6 +4,7 @@ package ssh
 
 import (
 	"golang.org/x/crypto/ssh/terminal"
+	"io"
 	"log"
 	"os"
 	"os/signal"
