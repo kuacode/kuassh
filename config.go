@@ -21,6 +21,8 @@ type Node struct {
 	Jump     []*Node     `yaml:"jump"`
 	Cmds     []*ShellCmd `yaml:"cmds"`
 	Children []*Node     `yaml:"children"`
+	// 上级，下级
+	F int // 1 back 2 forward
 }
 type ShellCmd struct {
 	Cmd   string        `yaml:"cmd"`
@@ -49,12 +51,7 @@ func LoadConfig() error {
 	if err != nil {
 		return err
 	}
-	for i, _ := range nodes {
-		nodes[i].NeedAuth = true
-		if nodes[i].Port == "" {
-			nodes[i].Port = "22"
-		}
-	}
+	fillValue(nodes)
 	configs = nodes
 	return nil
 }
@@ -79,4 +76,19 @@ func LoadConfigBytes(names ...string) ([]byte, error) {
 		}
 	}
 	return nil, err
+}
+
+func fillValue(nodes []*Node) {
+	for i, _ := range nodes {
+		if len(nodes[i].Children) > 0 {
+			fillValue(nodes[i].Children)
+		}
+		nodes[i].F = 1
+		//
+		nodes[i].NeedAuth = true
+		if nodes[i].Port == "" {
+			// 默认端口
+			nodes[i].Port = "22"
+		}
+	}
 }

@@ -16,6 +16,7 @@ require (
 	github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03
 	github.com/spf13/cobra v1.0.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+	golang.org/x/text v0.3.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )
 

@@ -24,9 +24,9 @@ import (
 var (
 	templates = &promptui.SelectTemplates{
 		Label:    "✨ {{ . | green}}",
-		Active:   "➤ {{ .Name | cyan  }}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
-		Inactive: "  {{.Name | faint}}{{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
-		Selected: "\U0001F336 {{ .Name | green }}",
+		Active:   "➤ 🟢{{if .Children}} 📁{{else if eq .Name `--parent--`}} ✈{{else}} 🚀{{end}}{{ .Name | faint  }} {{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
+		Inactive: "  🟡{{if .Children}} 📁{{else if eq .Name `--parent--`}} ✈{{else}} 🚀{{end}}{{ .Name | faint}} {{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
+		Selected: "\U0001F336{{.Name | green }}",
 	}
 )
 
@@ -41,9 +41,7 @@ func SelectNode(parent, nodes []*Node) *Node {
 		Templates: templates,
 		Size:      20,
 		//HideSelected: true, // 隐藏选择后顶部显示
-		HistorySelectedCount: 2,
-		//Stdin:                t.Input(),
-		//Stdout:               t.Output(),
+		HistorySelectedCount: -1,
 		Searcher: func(input string, index int) bool {
 			n := nodes[index]
 			content := fmt.Sprintf("%s %s %s", n.Name, n.User, n.Host)
@@ -79,7 +77,7 @@ func SelectNode(parent, nodes []*Node) *Node {
 		first := node.Children[0]
 		if first.Name != prev {
 			// 创建一个返回上一级节点
-			prevNode := &Node{Name: prev}
+			prevNode := &Node{Name: prev, F: 2}
 			node.Children = append([]*Node{prevNode}, node.Children...)
 		}
 		return SelectNode(nodes, node.Children)

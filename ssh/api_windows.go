@@ -6,6 +6,7 @@ import (
 	"github.com/mattn/go-tty"
 	"io"
 	"log"
+	"strings"
 )
 
 //
@@ -96,12 +97,29 @@ func (c *client) StartSession() {
 	}
 	// 系统终端输入拷贝到远程终端执行
 	go func(w io.Writer) {
+		var (
+			tmuxFilter = "\033[?1;0c"
+			runes      []rune
+		)
 		for {
 			r, _ := t.ReadRune()
 			if r == 0 {
 				continue
 			}
-			stdinPipe.Write([]byte(string(r)))
+			// enter
+			runes = append(runes, r)
+			// tmux处理
+			s := string(runes)
+			if strings.Index(tmuxFilter, s) == 0 && len(s) != len(tmuxFilter) {
+				continue
+			}
+			//s, err := ttyutil.ReadLine(t)
+			//if err != nil {
+			//	continue
+			//}
+			stdinPipe.Write([]byte(s))
+			//
+			runes = runes[:0]
 		}
 	}(stdinPipe)
 

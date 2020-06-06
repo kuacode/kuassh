@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"text/template"
 
 	"github.com/chzyer/readline"
@@ -54,9 +55,6 @@ type Select struct {
 	// HideSelected sets whether to hide the text displayed after an item is successfully selected.
 	HideSelected bool
 
-	// 显示最近几个成功的选择的对象
-	HistorySelectedCount int
-
 	// Templates can be used to customize the select output. If nil is passed, the
 	// default templates are used. See the SelectTemplates docs for more info.
 	Templates *SelectTemplates
@@ -83,6 +81,10 @@ type Select struct {
 
 	Stdin  io.ReadCloser
 	Stdout io.WriteCloser
+
+	///
+	// 显示最近几个成功的选择的对象
+	HistorySelectedCount int // -1 单行显示  0 不处理  0 < 保留选择历史行数
 }
 
 // SelectKeys defines the available keys used by select mode to enable the user to move around the list
@@ -381,7 +383,8 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 			err = ErrInterrupt
 		}
 		sb.Reset()
-		sb.WriteString("")
+		//sb.WriteString("")
+		sb.Clear()
 		sb.Flush()
 		rl.Write([]byte(showCursor))
 		rl.Close()
@@ -643,30 +646,65 @@ func clearScreen(sb *screenbuf.ScreenBuf) {
 }
 
 /***************************** 改下方法 ******************************/
-// 保留选择历史个数
-var count = 0
-var bufSelected [][]byte
+
+type SelectMode struct {
+	count       int      // 保留选择历史个数
+	bufSelected [][]byte // 当前选择缓存内容
+	length      int      // 当前缓存长度
+	//
+}
+
+var m = SelectMode{}
 
 // 添加方法
 func (s *Select) clearHistorySelected(sb *screenbuf.ScreenBuf) {
 	items, idx := s.list.Items()
 	item := items[idx]
 	bs := render(s.Templates.selected, item)
-
-	if s.HistorySelectedCount != 0 && count == s.HistorySelectedCount {
-		bufSelected = append(bufSelected[1:], bs)
+	//
+	if s.HistorySelectedCount == -1 {
+		//rt := reflect.TypeOf(item)
+		rv := reflect.ValueOf(item).Elem()
+		if rv.FieldByName("F").Int() == 1 {
+			m.bufSelected = append(m.bufSelected, bs)
+			m.length++
+			if m.length != 1 {
+				fmt.Print("\033[1A")
+			}
+		} else {
+			m.length--
+			m.bufSelected = m.bufSelected[:m.length]
+			//
+			fmt.Print("\033[1A")
+		}
+		var buf []byte
+		for i := 0; i < len(m.bufSelected); i++ {
+			buf = append(buf, []byte("/")...)
+			buf = append(buf, m.bufSelected[i]...)
+		}
+		if len(buf) > 0 {
+			sb.Write(buf)
+		} else {
+			sb.Clear()
+		}
+	} else if s.HistorySelectedCount == 0 {
+		sb.Write(bs)
+	} else if m.count == s.HistorySelectedCount {
+		m.bufSelected = append(m.bufSelected[1:], bs)
 		fmt.Print(fmt.Sprintf("\033[%dA", s.HistorySelectedCount))
-		for i := 0; i < len(bufSelected); i++ {
-			sb.Write(bufSelected[i])
+		for i := 0; i < len(m.bufSelected); i++ {
+			sb.Write(m.bufSelected[i])
 			// fmt.Println(string(bufSelected[i]))
 		}
 		//fmt.Print(fmt.Sprintf("\033[%dA", s.HistorySelectedCount+1)) // 上移2行
 		//fmt.Print("\x1b[2k")                                         // 清除一行
 		//fmt.Print(fmt.Sprintf("\033[%dB", s.HistorySelectedCount))   // 下移一行
 	} else {
-		count++
-		sb.Clear()
-		bufSelected = append(bufSelected, bs)
+		m.count++
+		//
+		m.bufSelected = append(m.bufSelected, bs)
+		m.length++
+		//
 		sb.Write(bs)
 	}
 }

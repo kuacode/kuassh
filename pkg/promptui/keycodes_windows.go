@@ -1,5 +1,7 @@
 package promptui
 
+import "github.com/chzyer/readline"
+
 // source: https://msdn.microsoft.com/en-us/library/aa243025(v=vs.60).aspx
 //
 //var (
@@ -27,3 +29,28 @@ package promptui
 //	KeyForward        rune = 39
 //	KeyForwardDisplay      = "l"
 //)
+
+var (
+	// KeyEnter is the default key for submission/selection.
+	KeyEnter rune = readline.CharEnter
+
+	// KeyBackspace is the default key for deleting input text.
+	//KeyBackspace rune = readline.CharBackspace
+	KeyBackspace rune = 8
+
+	// KeyPrev is the default key to go up during selection.
+	KeyPrev        rune = readline.CharPrev
+	KeyPrevDisplay      = "↑"
+
+	// KeyNext is the default key to go down during selection.
+	KeyNext        rune = readline.CharNext
+	KeyNextDisplay      = "↓"
+
+	// KeyBackward is the default key to page up during selection.
+	KeyBackward        rune = readline.CharBackward
+	KeyBackwardDisplay      = "←"
+
+	// KeyForward is the default key to page down during selection.
+	KeyForward        rune = readline.CharForward
+	KeyForwardDisplay      = "→"
+)

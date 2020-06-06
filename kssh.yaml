@@ -41,11 +41,11 @@
       host: 192.168.31.98
       port: 2233
       password: 'admin'
-- name: 本地
-  user: root
-  host: 127.0.0.1
-  port: 2233
-  password: 'admin'
+- name: debian
+  user: kcode
+  host: 192.168.1.102
+  port: 2222
+  password: '123456'
 
 - name: VPN
   user: root
