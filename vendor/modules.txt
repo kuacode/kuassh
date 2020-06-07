@@ -1,3 +1,9 @@
+# github.com/VividCortex/ewma v1.1.1
+github.com/VividCortex/ewma
+# github.com/cheggaaa/pb/v3 v3.0.4
+## explicit
+github.com/cheggaaa/pb/v3
+github.com/cheggaaa/pb/v3/termutil
 # github.com/chzyer/logex v1.1.10
 ## explicit
 # github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
@@ -5,6 +11,8 @@
 github.com/chzyer/readline
 # github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1
 ## explicit
+# github.com/fatih/color v1.7.0
+github.com/fatih/color
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
 # github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
@@ -16,10 +24,10 @@ github.com/kr/fs
 # github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a
 ## explicit
 github.com/lunixbochs/vtclean
-# github.com/mattn/go-colorable v0.1.4
+# github.com/mattn/go-colorable v0.1.6
 ## explicit
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.10
+# github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.9
 ## explicit
@@ -27,11 +35,8 @@ github.com/mattn/go-runewidth
 # github.com/mattn/go-tty v0.0.3
 ## explicit
 github.com/mattn/go-tty
-github.com/mattn/go-tty/ttyutil
-# github.com/nsf/termbox-go v0.0.0-20200418040025-38ba6e5628f1
+# github.com/pkg/errors v0.9.1
 ## explicit
-github.com/nsf/termbox-go
-# github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/pkg/sftp v1.11.0
 ## explicit
@@ -44,7 +49,9 @@ github.com/pkg/term/termios
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.3
 github.com/spf13/pflag
-# golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+# github.com/stretchr/testify v1.5.1
+## explicit
+# golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 ## explicit
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
@@ -56,12 +63,12 @@ golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/sys v0.0.0-20191120155948-bd437916bb0e
+# golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
+## explicit
 golang.org/x/sys/cpu
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.0
-## explicit
 # gopkg.in/yaml.v2 v2.3.0
 ## explicit
 gopkg.in/yaml.v2

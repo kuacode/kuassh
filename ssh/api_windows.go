@@ -6,6 +6,8 @@ import (
 	"github.com/mattn/go-tty"
 	"io"
 	"log"
+	"os"
+	"unicode/utf8"
 )
 
 //
@@ -43,7 +45,6 @@ func (c *client) winChange(t *tty.TTY) {
 			}
 		}
 	}
-
 }
 
 func (c *client) StartSession() {
@@ -79,7 +80,7 @@ func (c *client) StartSession() {
 		log.Fatal("StdoutPipe", err)
 	}
 	go func(r io.Reader) {
-		_, _ = io.Copy(t.Output(), r)
+		_, _ = io.Copy(os.Stderr, r)
 	}(stdoutPipe)
 	//
 	stderrPipe, err := c.session.StderrPipe()
@@ -87,7 +88,7 @@ func (c *client) StartSession() {
 		log.Fatal("StderrPipe", err)
 	}
 	go func(r io.Reader) {
-		_, _ = io.Copy(t.Output(), r)
+		_, _ = io.Copy(os.Stdout, r)
 	}(stderrPipe)
 	//
 	stdinPipe, err := c.session.StdinPipe()
@@ -112,10 +113,32 @@ func (c *client) StartSession() {
 func (c *client) runInput(t *tty.TTY, w io.Writer) {
 	buf := make([]byte, 128)
 	for {
-		n, _ := t.Input().Read(buf)
-		if n > 0 {
-			w.Write(buf[:n])
+		r, _ := t.ReadRune()
+		if r == 0 { // EOF
+			continue
 		}
+		n := utf8.EncodeRune(buf[:], r)
+		for t.Buffered() && n < 128 {
+			r, err := t.ReadRune()
+			if err != nil {
+				continue
+			}
+			n += utf8.EncodeRune(buf[n:], r)
+		}
+		// up arrow win
+		//27,91,65
+		//up linux
+		//27,79,65
+		//27,79,66
+		//27,79,67
+		//27,79,68
+		// 方向间
+		if n >= 3 && buf[0] == 27 && buf[1] == 91 {
+			if buf[2] == 65 || buf[2] == 66 || buf[2] == 67 || buf[2] == 68 {
+				buf[1] = 79
+			}
+		}
+		w.Write(buf[:n])
 	}
 }
 
