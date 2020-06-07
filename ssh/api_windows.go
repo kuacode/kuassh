@@ -6,7 +6,6 @@ import (
 	"github.com/mattn/go-tty"
 	"io"
 	"log"
-	"strings"
 )
 
 //
@@ -95,34 +94,8 @@ func (c *client) StartSession() {
 	if err != nil {
 		log.Fatal("StdinPipe", err)
 	}
-	// 系统终端输入拷贝到远程终端执行
-	go func(w io.Writer) {
-		var (
-			tmuxFilter = "\033[?1;0c"
-			runes      []rune
-		)
-		for {
-			r, _ := t.ReadRune()
-			if r == 0 {
-				continue
-			}
-			// enter
-			runes = append(runes, r)
-			// tmux处理
-			s := string(runes)
-			if strings.Index(tmuxFilter, s) == 0 && len(s) != len(tmuxFilter) {
-				continue
-			}
-			//s, err := ttyutil.ReadLine(t)
-			//if err != nil {
-			//	continue
-			//}
-			stdinPipe.Write([]byte(s))
-			//
-			runes = runes[:0]
-		}
-	}(stdinPipe)
-
+	// run cmd
+	go c.runInput(t, stdinPipe)
 	c.shell()
 	// 初始化命令
 	c.runCmds(stdinPipe)
@@ -134,3 +107,88 @@ func (c *client) StartSession() {
 		log.Fatal("Wait", err)
 	}
 }
+
+// 系统终端输入拷贝到远程终端执行
+func (c *client) runInput(t *tty.TTY, w io.Writer) {
+	buf := make([]byte, 128)
+	for {
+		n, _ := t.Input().Read(buf)
+		if n > 0 {
+			w.Write(buf[:n])
+		}
+	}
+}
+
+//func (c *client) runInput(t *tty.TTY, w io.Writer) {
+//var (
+//	tmuxFilter = "\033[?1;0c"
+//	runes      []rune
+//)
+//for {
+//	r, _ := t.ReadRune()
+//	if r == 0 {
+//		continue
+//	}
+//	// enter
+//	runes = append(runes, r)
+//	// tmux处理
+//	s := string(runes)
+//	if strings.Index(tmuxFilter, s) == 0 && len(s) != len(tmuxFilter) {
+//		continue
+//	}
+//	w.Write([]byte(s))
+//	//
+//	runes = runes[:0]
+//}
+
+///////////////////////////
+//const bufSize = 128
+//buf := make([]byte, bufSize)
+// tmux
+//var (
+//	tmuxFilter = "\033[?1;0c"
+//	runes      []rune
+//)
+//for {
+//	r, err := t.ReadRune()
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	if r == 0 {
+//		continue
+//	}
+//	// enter
+//	// tmux处理
+//	//runes = append(runes, r)
+//	//s := string(runes)
+//	//if strings.Index(tmuxFilter, s) == 0 && len(s) != len(tmuxFilter){
+//	//	continue
+//	//}
+//	//runes = runes[:0]
+//	//w.Write([]byte(s))
+//	// 会出问题
+//	n := utf8.EncodeRune(buf[:], r)
+//	for t.Buffered() && n < bufSize {
+//		r, err := t.ReadRune()
+//		if err != nil {
+//			continue
+//		}
+//		n += utf8.EncodeRune(buf[n:], r)
+//	}
+//	// up arrow win
+//	//27,91,65
+//	//up linux
+//	//27,79,65
+//	//27,79,66
+//	//27,79,67
+//	//27,79,68
+//	// 方向间
+//	if n >= 3 && buf[0] == 27 && buf[1] == 91 {
+//		if buf[2] == 65 || buf[2] == 66 || buf[2] == 67 || buf[2] == 68 {
+//			buf[1] = 79
+//		}
+//	}
+//	w.Write(buf[:n])
+//}
+
+//}

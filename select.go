@@ -23,15 +23,12 @@ import (
 //}
 var (
 	templates = &promptui.SelectTemplates{
-		Label:    "✨ {{ . | green}}",
-		Active:   "➤ 🟢{{if .Children}} 📁{{else if eq .Name `--parent--`}} ✈{{else}} 🚀{{end}}{{ .Name | faint  }} {{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
-		Inactive: "  🟡{{if .Children}} 📁{{else if eq .Name `--parent--`}} ✈{{else}} 🚀{{end}}{{ .Name | faint}} {{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
-		Selected: "\U0001F336{{.Name | green }}",
+		Label:    "🐹 {{ . | green}}",
+		Active:   "➤ 🟢{{if .Children}} 📁{{else if eq .Name `上一级`}} 🐳‍{{else}} 🚀{{end}}{{ .Name | faint}} {{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
+		Inactive: "  🟡{{if .Children}} 📁{{else if eq .Name `上一级`}} 🐳‍{{else}} 🚀{{end}}{{ .Name | faint}} {{if .Host}}{{if .User}}{{.User | faint}}{{`@` | faint}}{{end}}{{.Host | faint}}{{end}}",
+		Selected: "⛳{{.Name | green }}",
 	}
 )
-
-// 上级目录
-const prev = "--parent--"
 
 func SelectNode(parent, nodes []*Node) *Node {
 	// 终端选择 UI
@@ -74,12 +71,6 @@ func SelectNode(parent, nodes []*Node) *Node {
 	node := nodes[index]
 	// 子节点
 	if len(node.Children) > 0 {
-		first := node.Children[0]
-		if first.Name != prev {
-			// 创建一个返回上一级节点
-			prevNode := &Node{Name: prev, F: 2}
-			node.Children = append([]*Node{prevNode}, node.Children...)
-		}
 		return SelectNode(nodes, node.Children)
 	}
 	if node.Name == prev {

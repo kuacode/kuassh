@@ -3,7 +3,6 @@ package ssh
 import (
 	"fmt"
 	"github.com/kuassh"
-	"github.com/nsf/termbox-go"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
@@ -166,30 +165,5 @@ func (c *client) shell() {
 	err := c.session.Shell()
 	if err != nil {
 		log.Fatal("Shell", err)
-	}
-}
-
-func getTermBox() {
-	err := termbox.Init()
-	if err != nil {
-		panic(err)
-	}
-	defer termbox.Close()
-
-Loop:
-	for {
-		switch ev := termbox.PollEvent(); ev.Type {
-		case termbox.EventKey:
-			switch ev.Key {
-			case termbox.KeyEsc:
-				fmt.Println("You press Esc")
-			case termbox.KeyF1:
-				fmt.Println("You press F1")
-			case termbox.KeyArrowUp:
-				fmt.Printf("You press UP %v", termbox.KeyArrowUp)
-			default:
-				break Loop
-			}
-		}
 	}
 }

@@ -78,15 +78,23 @@ func LoadConfigBytes(names ...string) ([]byte, error) {
 	return nil, err
 }
 
+// 上级目录
+const prev = "上一级"
+
 func fillValue(nodes []*Node) {
 	for i, _ := range nodes {
 		if len(nodes[i].Children) > 0 {
+			// 创建一个返回上一级节点
+			prevNode := &Node{Name: prev, F: 2}
+			nodes[i].Children = append([]*Node{prevNode}, nodes[i].Children...)
 			fillValue(nodes[i].Children)
 		}
-		nodes[i].F = 1
+		if nodes[i].F != 2 {
+			nodes[i].F = 1
+		}
 		//
 		nodes[i].NeedAuth = true
-		if nodes[i].Port == "" {
+		if nodes[i].Port == "" && nodes[i].Host != "" {
 			// 默认端口
 			nodes[i].Port = "22"
 		}

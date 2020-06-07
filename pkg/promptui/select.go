@@ -382,6 +382,12 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 		if err.Error() == "Interrupt" {
 			err = ErrInterrupt
 		}
+		// todo fix 选择一行之后推出有点小问题。。。不影响使用
+		//if len(m.bufSelected) > 0 {
+		//	sb.Reset()
+		//	sb.Clear()
+		//	sb.Flush()
+		//}
 		sb.Reset()
 		//sb.WriteString("")
 		sb.Clear()
