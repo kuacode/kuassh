@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"github.com/mattn/go-tty"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
 	"time"
+	"unicode/utf8"
 )
 
 func main() {
@@ -16,9 +18,9 @@ func main() {
 		}
 	}
 
-	client, err := ssh.Dial("tcp", "127.0.0.1:2233", &ssh.ClientConfig{
-		User: "root",
-		Auth: []ssh.AuthMethod{ssh.Password("admin")},
+	client, err := ssh.Dial("tcp", "172.17.111.16:2222", &ssh.ClientConfig{
+		User: "kcode",
+		Auth: []ssh.AuthMethod{ssh.Password("123456")},
 		//需要验证服务端，不做验证返回nil就可以，点击HostKeyCallback看源码就知道了
 		// HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 		// 	return nil
@@ -80,7 +82,7 @@ func main() {
 	//}
 	//defer clean()
 	go func() {
-		//bs := make([]byte, 128)
+		buf := make([]byte, 128)
 		//rs := []rune{}
 		for {
 			//n, err := t.Input().Read(bs)
@@ -89,17 +91,25 @@ func main() {
 			//	continue
 			//}
 			//stdinPipe.Write(bs[:n])
-			r, _ := t.ReadRune()
-			if r == 0 {
-				continue
-			}
-			stdinPipe.Write([]byte(string(r)))
+			//r, _ := t.ReadRune()
+			//if r == 0 {
+			//	continue
+			//}
+			//stdinPipe.Write([]byte(string(r)))
+
 			//	session.Stdout.Write([]byte(fmt.Sprint(r)))
 			//} else {
 			//
 			//}
+			reader := bufio.NewReaderSize(t.Input(), 128)
+			r, _, _ := reader.ReadRune()
 
-			//s, _ := t.ReadString()
+			n := utf8.EncodeRune(buf[:], r)
+			for reader.Buffered() > 0 && n < 128 {
+				r, _, _ = reader.ReadRune()
+				n += utf8.EncodeRune(buf[n:], r)
+			}
+			stdinPipe.Write(buf[:n])
 		}
 	}()
 

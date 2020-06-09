@@ -3,12 +3,11 @@
 package ssh
 
 import (
+	"github.com/mattn/go-tty"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
 // 监听窗口变化
@@ -22,14 +21,11 @@ import (
 //	}
 // }
 // 监听窗口大小变化
-func (c *client) winChange(fd int) {
-	sigwinchCh := make(chan os.Signal, 1)
-	signal.Notify(sigwinchCh, syscall.SIGWINCH)
-
+func (c *client) winChange(t *tty.TTY) {
 	for {
 		select {
-		case <-sigwinchCh:
-			currTermWidth, currTermHeight, err := terminal.GetSize(fd)
+		case <-t.SIGWINCH():
+			currTermWidth, currTermHeight, err := t.Size()
 			if err != nil {
 				log.Printf("获取当前窗口大小失败:%s\n", err)
 				continue
@@ -57,8 +53,14 @@ func (c *client) StartSession() {
 		log.Fatal("NewSession:", err)
 	}
 	defer c.session.Close()
+	// tty
+	t, err := tty.Open()
+	if err != nil {
+		log.Fatal("tty.Open:", err)
+	}
+	defer t.Close()
 	// 拿到当前终端文件描述符
-	fd := int(os.Stdin.Fd())
+	fd := int(t.Input().Fd())
 	state, err := terminal.MakeRaw(fd)
 	// 退出还原终端
 	defer terminal.Restore(fd, state)
@@ -66,9 +68,8 @@ func (c *client) StartSession() {
 		log.Fatal("MakeRaw:", err)
 	}
 	// 终端大小;windows 下获取输出才能正确运行,目前linux和windows下获取输出调整窗口大小正常，暂时不做区分处理
-	var ofd = int(os.Stdout.Fd())
 	// 获取终端大小
-	width, height, err := terminal.GetSize(ofd)
+	width, height, err := t.Size()
 	if err != nil {
 		log.Fatal("GetSize:", err)
 	}
@@ -77,7 +78,7 @@ func (c *client) StartSession() {
 		w: width,
 	}
 	// 监听窗口变化
-	go c.winChange(ofd)
+	go c.winChange(t)
 	// 请求Pty
 	c.requestPty()
 	// 重定向输入输出
@@ -109,7 +110,7 @@ func (c *client) StartSession() {
 	go func(w io.Writer) {
 		buf := make([]byte, 128)
 		for {
-			n, err := os.Stdin.Read(buf)
+			n, err := t.Input().Read(buf)
 			if err != nil {
 				log.Fatal("终端读取命令错误:", err)
 			}
