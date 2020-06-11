@@ -4,7 +4,6 @@ package ssh
 
 import (
 	"github.com/containerd/console"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -44,92 +43,5 @@ func (c *client) winChange(current console.Console) {
 			continue
 		}
 		c.win.w, c.win.h = currTermWidth, currTermHeight
-	}
-}
-
-func (c *client) StartSession() {
-	defer c.SSHClient.Close()
-	//
-	var err error
-	c.session, err = c.SSHClient.NewSession()
-	if err != nil {
-		log.Fatal("NewSession:", err)
-	}
-	defer c.session.Close()
-	//
-	current := console.Current()
-	defer current.Close()
-	// 去掉缓存
-	err = current.SetRaw()
-	if err != nil {
-		log.Fatal("MakeRaw:", err)
-	}
-	// 退出还原终端
-	defer current.Reset()
-	// 终端大小;windows 下获取输出才能正确运行,目前linux和windows下获取输出调整窗口大小正常，暂时不做区分处理
-	// 获取终端大小
-	ws, err := current.Size()
-	if err != nil {
-		log.Fatal("GetSize:", err)
-	}
-	c.win = &terminalWindow{
-		h: int(ws.Height),
-		w: int(ws.Width),
-	}
-	// 监听窗口变化
-	go c.winChange(current)
-	// 请求Pty
-	c.requestPty()
-	// 重定向输入输出
-	//c.session.Stdout = os.Stdout
-	//c.session.Stderr = os.Stderr
-	//c.session.Stdin = os.Stdin
-	// 直接对接了 stderr、stdout 和 stdin 会造成 tmux等出问题 ，实际上我们应当启动一个异步的管道式复制行为
-	stdoutPipe, err := c.session.StdoutPipe()
-	if err != nil {
-		log.Fatal("StdoutPipe", err)
-	}
-	go func(r io.Reader) {
-		_, _ = io.Copy(os.Stdout, r)
-	}(stdoutPipe)
-	//
-	stderrPipe, err := c.session.StderrPipe()
-	if err != nil {
-		log.Fatal("StderrPipe", err)
-	}
-	go func(r io.Reader) {
-		_, _ = io.Copy(os.Stderr, r)
-	}(stderrPipe)
-
-	stdinPipe, err := c.session.StdinPipe()
-	if err != nil {
-		log.Fatal("StdinPipe", err)
-	}
-	// 系统终端输入拷贝到远程终端执行
-	go func(cur console.Console, w io.Writer) {
-		buf := make([]byte, 128)
-		for {
-			n, err := cur.Read(buf)
-			if err != nil {
-				log.Fatal("终端读取命令错误:", err)
-			}
-			if n > 0 {
-				_, err = w.Write(buf[:n])
-				if err != nil {
-					log.Fatal("发送命令错误:", err)
-				}
-			}
-		}
-	}(current, stdinPipe)
-
-	c.shell()
-	// 初始化命令
-	c.runCmds(stdinPipe)
-	//
-	go c.keepalive()
-	// 等待shell
-	err = c.session.Wait()
-	if err != nil {
-		log.Fatal("Wait", err)
 	}
 }
