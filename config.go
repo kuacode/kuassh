@@ -44,7 +44,7 @@ func GetConfig() []*Node {
 }
 
 func LoadConfig() error {
-	b, err := LoadConfigBytes("kssh.yaml", ".kssh.yaml")
+	b, err := LoadConfigBytes("kuassh.yaml", ".kuassh.yaml")
 	if err != nil {
 		return err
 	}
