@@ -1,7 +1,7 @@
 ARCHS ?= amd64
-GOOS ?= linux
+GOOS ?= windows
 
-BINARY=kuassh
+BINARY=kuassh.exe
 VERSION=`git describe --tags`
 LDFLAGS=-ldflags "-w -s -X main.version=${VERSION}"
 
