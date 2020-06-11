@@ -6,9 +6,9 @@
 
 # - name: 通过密码登陆
 #   user: root
-#   host: 149.28.25.177
+#   host: 14.2.25.77
 #   port: 22
-#   password: '%9aA-jR1[973FBn$'
+#   password: '%9aA-jR1[9$'
 
 # - name: 登陆后，执行shell命令
 #   user: root
@@ -47,8 +47,8 @@
   port: 2222
   password: '123456'
 
-- name: VPN
+- name: V
   user: root
-  host: 149.28.25.177
+  host: 14.2.25.77
   port: 22
-  password: '%9aA-jR1[973FBn$'
+  password: '%9aA-jR1[9$'
