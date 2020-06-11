@@ -3,11 +3,12 @@
 package ssh
 
 import (
-	"github.com/mattn/go-tty"
 	"io"
 	"log"
 	"os"
-	"unicode/utf8"
+	"time"
+
+	"github.com/containerd/console"
 )
 
 //
@@ -33,17 +34,40 @@ import (
 //	}
 //}
 
-func (c *client) winChange(t *tty.TTY) {
-	// 监听窗口
-	for ws := range t.SIGWINCH() {
-		if c.win.w != ws.W || c.win.h != ws.H {
-			err := c.session.WindowChange(ws.H, ws.W)
-			if err != nil {
-				log.Printf("调整窗口大小错误:%v\n", err)
-			} else {
-				c.win.w, c.win.h = ws.W, ws.H
-			}
+// func (c *client) winChange(t *tty.TTY) {
+// 	// 监听窗口
+// 	for ws := range t.SIGWINCH() {
+// 		if c.win.w != ws.W || c.win.h != ws.H {
+// 			err := c.session.WindowChange(ws.H, ws.W)
+// 			if err != nil {
+// 				log.Printf("调整窗口大小错误:%v\n", err)
+// 			} else {
+// 				c.win.w, c.win.h = ws.W, ws.H
+// 			}
+// 		}
+// 	}
+// }
+
+// 监听窗口大小变化
+func (c *client) winChange(current console.Console) {
+	t := time.Tick(time.Second)
+	for range t {
+		ws, err := current.Size()
+		if err != nil {
+			log.Printf("获取当前窗口大小失败:%s\n", err)
+			continue
 		}
+		currTermWidth, currTermHeight := int(ws.Width), int(ws.Height)
+		// 窗口大小发生变化
+		if currTermHeight == c.win.h && currTermWidth == c.win.w {
+			continue
+		}
+		err = c.session.WindowChange(currTermHeight, currTermWidth)
+		if err != nil {
+			log.Printf("Unable to send window-change reqest: %s\n", err)
+			continue
+		}
+		c.win.w, c.win.h = currTermWidth, currTermHeight
 	}
 }
 
@@ -56,22 +80,16 @@ func (c *client) StartSession() {
 		log.Fatal("NewSession:", err)
 	}
 	defer c.session.Close()
-	// tty
-	t, err := tty.Open()
-	if err != nil {
-		log.Fatal("tty:", err)
-	}
-	// 还原终端？
-	clean, err := t.Raw()
-	if err != nil {
-		log.Fatal("tty:", err)
-	}
-	defer clean()
+	// 终端
+	current := console.Current()
+	current.SetRaw()
+	defer current.Reset()
 	// win size
-	width, height, err := t.Size()
-	c.win = &terminalWindow{h: height, w: width}
+	ws, err := current.Size()
+	c.win = &terminalWindow{h: int(ws.Height), w: int(ws.Width)}
 	// 监听窗口变化
-	go c.winChange(t)
+	// go c.winChange(t)
+	go c.winChange(current)
 	// 请求Pty
 	c.requestPty()
 	// 直接对接了 stderr、stdout 和 stdin 会造成 tmux等出问题 ，实际上我们应当启动一个异步的管道式复制行为
@@ -96,7 +114,7 @@ func (c *client) StartSession() {
 		log.Fatal("StdinPipe", err)
 	}
 	// run cmd
-	go c.runInput(t, stdinPipe)
+	go c.runInput(current, stdinPipe)
 	c.shell()
 	// 初始化命令
 	c.runCmds(stdinPipe)
@@ -110,33 +128,12 @@ func (c *client) StartSession() {
 }
 
 // 系统终端输入拷贝到远程终端执行
-func (c *client) runInput(t *tty.TTY, w io.Writer) {
+func (c *client) runInput(current console.Console, w io.Writer) {
 	buf := make([]byte, 128)
 	for {
-		r, _ := t.ReadRune()
-		if r == 0 { // EOF
-			continue
-		}
-		n := utf8.EncodeRune(buf[:], r)
-		for t.Buffered() && n < 128 {
-			r, err := t.ReadRune()
-			if err != nil {
-				continue
-			}
-			n += utf8.EncodeRune(buf[n:], r)
-		}
-		// up arrow win
-		//27,91,65
-		//up linux
-		//27,79,65
-		//27,79,66
-		//27,79,67
-		//27,79,68
-		// 方向间
-		if n >= 3 && buf[0] == 27 && buf[1] == 91 {
-			if buf[2] == 65 || buf[2] == 66 || buf[2] == 67 || buf[2] == 68 {
-				buf[1] = 79
-			}
+		n, err := current.Read(buf)
+		if err != nil {
+			break
 		}
 		w.Write(buf[:n])
 	}
