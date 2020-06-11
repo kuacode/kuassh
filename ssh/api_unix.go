@@ -3,11 +3,12 @@
 package ssh
 
 import (
-	"github.com/mattn/go-tty"
-	"golang.org/x/crypto/ssh/terminal"
+	"github.com/containerd/console"
 	"io"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 // 监听窗口变化
@@ -21,26 +22,28 @@ import (
 //	}
 // }
 // 监听窗口大小变化
-func (c *client) winChange(t *tty.TTY) {
+func (c *client) winChange(current console.Console) {
+	sigwinchCh := make(chan os.Signal, 1)
+	signal.Notify(sigwinchCh, syscall.SIGWINCH)
 	for {
-		select {
-		case <-t.SIGWINCH():
-			currTermWidth, currTermHeight, err := t.Size()
-			if err != nil {
-				log.Printf("获取当前窗口大小失败:%s\n", err)
-				continue
-			}
-			// Terminal size has not changed, don's do anything.
-			if currTermHeight == c.win.h && currTermWidth == c.win.w {
-				continue
-			}
-			err = c.session.WindowChange(currTermHeight, currTermWidth)
-			if err != nil {
-				log.Printf("Unable to send window-change reqest: %s\n", err)
-				continue
-			}
-			c.win.w, c.win.h = currTermWidth, currTermHeight
+		<-sigwinchCh
+		//
+		ws, err := current.Size()
+		if err != nil {
+			log.Printf("获取当前窗口大小失败:%s\n", err)
+			continue
 		}
+		currTermWidth, currTermHeight := int(ws.Width), int(ws.Height)
+		// Terminal size has not changed, don's do anything.
+		if currTermHeight == c.win.h && currTermWidth == c.win.w {
+			continue
+		}
+		err = c.session.WindowChange(currTermHeight, currTermWidth)
+		if err != nil {
+			log.Printf("Unable to send window-change reqest: %s\n", err)
+			continue
+		}
+		c.win.w, c.win.h = currTermWidth, currTermHeight
 	}
 }
 
@@ -53,32 +56,28 @@ func (c *client) StartSession() {
 		log.Fatal("NewSession:", err)
 	}
 	defer c.session.Close()
-	// tty
-	t, err := tty.Open()
-	if err != nil {
-		log.Fatal("tty.Open:", err)
-	}
-	defer t.Close()
-	// 拿到当前终端文件描述符
-	fd := int(t.Input().Fd())
-	state, err := terminal.MakeRaw(fd)
-	// 退出还原终端
-	defer terminal.Restore(fd, state)
+	//
+	current := console.Current()
+	defer current.Close()
+	// 去掉缓存
+	err = current.SetRaw()
 	if err != nil {
 		log.Fatal("MakeRaw:", err)
 	}
+	// 退出还原终端
+	defer current.Reset()
 	// 终端大小;windows 下获取输出才能正确运行,目前linux和windows下获取输出调整窗口大小正常，暂时不做区分处理
 	// 获取终端大小
-	width, height, err := t.Size()
+	ws, err := current.Size()
 	if err != nil {
 		log.Fatal("GetSize:", err)
 	}
 	c.win = &terminalWindow{
-		h: height,
-		w: width,
+		h: int(ws.Height),
+		w: int(ws.Width),
 	}
 	// 监听窗口变化
-	go c.winChange(t)
+	go c.winChange(current)
 	// 请求Pty
 	c.requestPty()
 	// 重定向输入输出
@@ -107,10 +106,10 @@ func (c *client) StartSession() {
 		log.Fatal("StdinPipe", err)
 	}
 	// 系统终端输入拷贝到远程终端执行
-	go func(w io.Writer) {
+	go func(cur console.Console, w io.Writer) {
 		buf := make([]byte, 128)
 		for {
-			n, err := t.Input().Read(buf)
+			n, err := cur.Read(buf)
 			if err != nil {
 				log.Fatal("终端读取命令错误:", err)
 			}
@@ -121,7 +120,7 @@ func (c *client) StartSession() {
 				}
 			}
 		}
-	}(stdinPipe)
+	}(current, stdinPipe)
 
 	c.shell()
 	// 初始化命令

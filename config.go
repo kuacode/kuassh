@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/user"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -45,17 +44,7 @@ func GetConfig() []*Node {
 }
 
 func LoadConfig() error {
-	execPath := os.Args[0]
-	var (
-		b   []byte
-		err error
-	)
-	if execPath != "" {
-		ss := strings.Split(execPath, string(filepath.Separator))
-		LoadConfigBytes(strings.Join(append(ss[:len(ss)-1], "kssh.yaml"), string(filepath.Separator)), strings.Join(append(ss[:len(ss)-1], ".kssh.yaml"), string(filepath.Separator)))
-	} else {
-		b, err = LoadConfigBytes("kssh.yaml", ".kssh.yaml")
-	}
+	b, err := LoadConfigBytes("kssh.yaml", ".kssh.yaml")
 	if err != nil {
 		return err
 	}
@@ -81,9 +70,12 @@ func LoadConfigBytes(names ...string) ([]byte, error) {
 			return kssh, nil
 		}
 	}
+	execPath := os.Args[0]
+	paths := strings.Split(execPath, string(os.PathSeparator))
 	// 相对路径
 	for i := range names {
-		kssh, err := ioutil.ReadFile(names[i])
+		f := strings.Join(append(paths[:len(paths)-1], names[i]), string(os.PathSeparator))
+		kssh, err := ioutil.ReadFile(f)
 		if err == nil {
 			return kssh, nil
 		}

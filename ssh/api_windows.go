@@ -133,9 +133,14 @@ func (c *client) runInput(current console.Console, w io.Writer) {
 	for {
 		n, err := current.Read(buf)
 		if err != nil {
-			break
+			log.Fatal("终端读取命令错误:", err)
 		}
-		w.Write(buf[:n])
+		if n > 0 {
+			_, err = w.Write(buf[:n])
+			if err != nil {
+				log.Fatal("发送命令错误:", err)
+			}
+		}
 	}
 }
 
