@@ -3,8 +3,11 @@ package kuassh
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/user"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -42,7 +45,17 @@ func GetConfig() []*Node {
 }
 
 func LoadConfig() error {
-	b, err := LoadConfigBytes("kssh.yaml", ".kssh.yaml")
+	execPath := os.Args[0]
+	var (
+		b   []byte
+		err error
+	)
+	if execPath != "" {
+		ss := strings.Split(execPath, string(filepath.Separator))
+		LoadConfigBytes(strings.Join(append(ss[:len(ss)-1], "kssh.yaml"), string(filepath.Separator)), strings.Join(append(ss[:len(ss)-1], ".kssh.yaml"), string(filepath.Separator)))
+	} else {
+		b, err = LoadConfigBytes("kssh.yaml", ".kssh.yaml")
+	}
 	if err != nil {
 		return err
 	}
