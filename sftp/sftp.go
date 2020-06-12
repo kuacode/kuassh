@@ -2,18 +2,19 @@ package sftp
 
 import (
 	"fmt"
-	"github.com/cheggaaa/pb/v3"
-	"github.com/chzyer/readline"
-	"github.com/kuassh"
-	"github.com/kuassh/pkg/go-prompt"
-	kssh "github.com/kuassh/ssh"
-	"github.com/pkg/sftp"
 	"io"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cheggaaa/pb/v3"
+	"github.com/chzyer/readline"
+	"github.com/kuassh"
+	"github.com/kuassh/pkg/go-prompt"
+	kssh "github.com/kuassh/ssh"
+	"github.com/pkg/sftp"
 )
 
 ///  tmpl := `{{ red "With funcs:" }} {{ bar . "<" "-" (cycle . "↖" "↗" "↘" "↙" ) "." ">"}} {{speed . | rndcolor }} {{percent .}} {{string . "my_green_string" | green}} {{string . "my_blue_string" | blue}}`
@@ -33,6 +34,7 @@ type sftpClient struct {
 	lUserHome string
 	lWorkDir  string
 	pb        *pb.ProgressBar
+	Instance  *readline.Instance
 }
 
 func NewSftpClient() *sftpClient {
@@ -80,15 +82,15 @@ func (sc *sftpClient) runTerminal() {
 		HistorySearchFold:   true,
 		FuncFilterInputRune: filterInput,
 	}
-
-	l, err := readline.NewEx(conf)
+	var err error
+	sc.Instance, err = readline.NewEx(conf)
 	if err != nil {
 		panic(err)
 	}
-	defer l.Close()
-	log.SetOutput(l.Stderr())
+	defer sc.Instance.Close()
+	log.SetOutput(sc.Instance.Stderr())
 	for {
-		line, err := l.Readline()
+		line, err := sc.Instance.Readline()
 		if err == readline.ErrInterrupt {
 			if len(line) == 0 {
 				break
@@ -102,7 +104,7 @@ func (sc *sftpClient) runTerminal() {
 		switch {
 		case line == "":
 		case cmds[0] == "login":
-			pswd, err := l.ReadPassword("please enter your password: ")
+			pswd, err := sc.Instance.ReadPassword("please enter your password: ")
 			if err != nil {
 				break
 			}
@@ -117,14 +119,14 @@ func (sc *sftpClient) runTerminal() {
 			sc.cd(cmds)
 		case cmds[0] == "lcd": // change local directory
 			sc.lcd(cmds)
-		case cmds[0] == "ls":
+		case cmds[0] == "ls" || cmds[0] == "ll":
 			sc.ls(cmds)
-		case cmds[0] == "lls":
+		case cmds[0] == "lls" || cmds[0] == "lll":
 			sc.lls(cmds)
 		case cmds[0] == "get":
 			sc.get(cmds)
 		case cmds[0] == "help":
-			usage(l.Stderr())
+			usage(sc.Instance.Stderr())
 		case cmds[0] == "sleep":
 			log.Println("sleep 4 second")
 			time.Sleep(4 * time.Second)

@@ -26,7 +26,7 @@ func (sc *sftpClient) cd(args []string) {
 		fmt.Printf("Error: %s\n", "is not directory")
 		return
 	}
-	sc.rWorkDir = args[1]
+	sc.rWorkDir = rdir
 	// sc.client.Walk(rdir)
 }
 
@@ -50,6 +50,6 @@ func (sc *sftpClient) lcd(args []string) {
 		fmt.Printf("Error: %s\n", "is not directory")
 		return
 	}
-	sc.lWorkDir = args[1]
+	sc.lWorkDir = ldir
 	// sc.client.Walk(rdir)
 }
