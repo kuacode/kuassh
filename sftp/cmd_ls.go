@@ -48,6 +48,7 @@ func (sc *sftpClient) printFiles(r bool, cmds []string) {
 			a, l = true, true
 		} else {
 			fmt.Printf("命令错误，请重新输入\n")
+			return
 		}
 	}
 	//
@@ -71,5 +72,7 @@ func (sc *sftpClient) printFiles(r bool, cmds []string) {
 			fmt.Printf(s, color.WhiteString("%s", f.Name()))
 		}
 	}
-	fmt.Println()
+	if !l {
+		fmt.Println()
+	}
 }

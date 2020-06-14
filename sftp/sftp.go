@@ -2,7 +2,6 @@ package sftp
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strconv"
@@ -72,85 +71,12 @@ func (sc *sftpClient) Login(node *kuassh.Node) {
 }
 
 func (sc *sftpClient) runTerminal() {
-	conf := &readline.Config{
-		Prompt:          "\033[31m»\033[0m ",
-		HistoryFile:     "/tmp/readline.tmp",
-		AutoComplete:    completer,
-		InterruptPrompt: "^C",
-		EOFPrompt:       "exit",
-
-		HistorySearchFold:   true,
-		FuncFilterInputRune: filterInput,
-	}
-	var err error
-	sc.Instance, err = readline.NewEx(conf)
-	if err != nil {
-		panic(err)
-	}
-	defer sc.Instance.Close()
-	log.SetOutput(sc.Instance.Stderr())
-	for {
-		line, err := sc.Instance.Readline()
-		if err == readline.ErrInterrupt {
-			if len(line) == 0 {
-				break
-			} else {
-				continue
-			}
-		} else if err == io.EOF {
-			break
-		}
-		cmds := splitCommand(line)
-		switch {
-		case line == "":
-		case cmds[0] == "login":
-			pswd, err := sc.Instance.ReadPassword("please enter your password: ")
-			if err != nil {
-				break
-			}
-			println("you enter:", strconv.Quote(string(pswd)))
-		case cmds[0] == "bye":
-			goto exit
-		case cmds[0] == "pwd":
-			println(sc.rWorkDir)
-		case cmds[0] == "lpwd":
-			println(sc.lWorkDir)
-		case cmds[0] == "cd": // change remote directory
-			sc.cd(cmds)
-		case cmds[0] == "lcd": // change local directory
-			sc.lcd(cmds)
-		case cmds[0] == "ls" || cmds[0] == "ll":
-			sc.ls(cmds)
-		case cmds[0] == "lls" || cmds[0] == "lll":
-			sc.lls(cmds)
-		case cmds[0] == "get":
-			sc.get(cmds)
-		case cmds[0] == "help":
-			usage(sc.Instance.Stderr())
-		case cmds[0] == "sleep":
-			log.Println("sleep 4 second")
-			time.Sleep(4 * time.Second)
-		default:
-			log.Println("命令错误:", strconv.Quote(line))
-		}
-	}
-exit:
-}
-
-// 监控输出
-func filterInput(r rune) (rune, bool) {
-	switch r {
-	// block CtrlZ feature
-	case readline.CharCtrlZ:
-		return r, false
-	}
-	return r, true
-}
-
-// 帮助信息
-func usage(w io.Writer) {
-	io.WriteString(w, "commands:\n")
-	io.WriteString(w, completer.Tree("    "))
+	p := prompt.New(
+		sc.executor,
+		sc.completer,
+		prompt.OptionPrefix(">>> "),
+	)
+	p.Run()
 }
 
 func splitCommand(command string) []string {
@@ -162,6 +88,36 @@ func splitCommand(command string) []string {
 		}
 	}
 	return commands
+}
+
+func (sc *sftpClient) executor(line string) {
+	cmds := splitCommand(line)
+	switch {
+	case line == "":
+	case cmds[0] == "login":
+		// todo
+	case cmds[0] == "bye":
+		os.Exit(0)
+	case cmds[0] == "pwd":
+		println(sc.rWorkDir)
+	case cmds[0] == "lpwd":
+		println(sc.lWorkDir)
+	case cmds[0] == "cd": // change remote directory
+		sc.cd(cmds)
+	case cmds[0] == "lcd": // change local directory
+		sc.lcd(cmds)
+	case cmds[0] == "ls" || cmds[0] == "ll":
+		sc.ls(cmds)
+	case cmds[0] == "lls" || cmds[0] == "lll":
+		sc.lls(cmds)
+	case cmds[0] == "get":
+		sc.get(cmds)
+	case cmds[0] == "sleep":
+		fmt.Println("sleep 4 second")
+		time.Sleep(4 * time.Second)
+	default:
+		fmt.Println("命令错误:", strconv.Quote(line))
+	}
 }
 
 // 提示函数
@@ -181,10 +137,12 @@ func (sc *sftpClient) completer(d prompt.Document) []prompt.Suggest {
 		{Text: "help", Description: "Display this help text"},
 		{Text: "lcd", Description: "Change local directory to 'path'"},
 		{Text: "lls", Description: "Display local directory listing"},
+		{Text: "lll", Description: "Display local directory listing"},
 		{Text: "lmkdir", Description: "Create local directory"},
 		// {Text: "ln", Description: "Link remote file (-s for symlink)"},
 		{Text: "lpwd", Description: "Print local working directory"},
 		{Text: "ls", Description: "Display remote directory listing"},
+		{Text: "ll", Description: "Display remote directory listing"},
 		// {Text: "lumask", Description: "Set local umask to 'umask'"},
 		{Text: "mkdir", Description: "Create remote directory"},
 		// {Text: "progress", Description: "Toggle display of progress meter"},
