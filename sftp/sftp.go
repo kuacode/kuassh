@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/c-bata/go-prompt/completer"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/chzyer/readline"
 	"github.com/kuassh"
@@ -22,6 +23,7 @@ import (
 //// set values for string elements
 //   bar.Set("my_green_string", "green").
 //	 Set("my_blue_string", "blue")
+var tmpl = `{{ counters . "%s/%s" "%s/?"}} {{ bar . "[" "=" (cycle . ">" ) "." "]"}} {{speed .}} {{percent .}} {{rtime . "%s" "%s" "???"}}`
 
 type sftpClient struct {
 	client *sftp.Client
@@ -75,6 +77,7 @@ func (sc *sftpClient) runTerminal() {
 		sc.executor,
 		sc.completer,
 		prompt.OptionPrefix(">>> "),
+		prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
 	)
 	p.Run()
 }
@@ -159,4 +162,16 @@ func (sc *sftpClient) completer(d prompt.Document) []prompt.Suggest {
 		{Text: "?", Description: "Display this help text"},
 	}
 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
+}
+
+// 创建PB
+func (sc *sftpClient) NewProcessBar(name string, total int64) {
+	sc.pb = pb.New64(total)
+	sc.pb.SetWriter(os.Stdout)
+	sc.pb.Set(pb.Bytes, true)
+	sc.pb.SetWidth(100)
+	// todo 设置输出字符
+	//tmpl := `{{ counters . "%s/%s" "%s/?"}} {{ bar . "[" "=" (cycle . ">" ) "." "]"}} {{speed . | rndcolor }} {{percent .}} {{rtime . "%s" "%s" "???"}} {{string . "my_green_string" | green}} {{string . "my_blue_string" | blue}}`
+	tmpl := name + ` {{ counters . "%s/%s" "%s/?"}} {{ bar . "[" "=" (cycle . ">" ) "." "]"}} {{speed .}} {{percent .}} {{rtime . "%s" "%s" "???"}}`
+	sc.pb.SetTemplateString(tmpl)
 }

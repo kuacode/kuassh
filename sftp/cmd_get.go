@@ -1,11 +1,11 @@
 package sftp
 
 import (
+	"errors"
 	"fmt"
-	"github.com/cheggaaa/pb/v3"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -41,31 +41,13 @@ func (sc *sftpClient) get(args []string) {
 		fmt.Println("get error:", err)
 		return
 	}
-	// local file
-	lf, lerr := os.OpenFile(downloadDir, os.O_RDWR|os.O_CREATE, 0644)
-	defer lf.Close()
-	lfInfo, err := lf.Stat()
-
 	if rfInfo.IsDir() {
-		// if local dir not exist, we will create a local dir
-		// with the same name as the remote dir
-		if lerr != nil {
-			if os.IsNotExist(lerr) {
-				lerr = os.MkdirAll(path.Join(downloadDir), rfInfo.Mode())
-				if lerr != nil {
-					fmt.Println("get making dir error:", lerr)
-				}
-			}
-		} else {
-			// if local dir exist, we will merge local dir path and remote dir relative path
-			if lfInfo.IsDir() {
-				// create local dir
-				downloadDir = path.Join(downloadDir, path.Base(rdir))
-				gerr := os.MkdirAll(downloadDir, rfInfo.Mode())
-				if gerr != nil {
-					fmt.Println("get making dir error:", gerr)
-				}
-			}
+		// local file
+		downloadDir := filepath.Join(downloadDir, filepath.Base(rdir))
+		err := sc.checkDir(downloadDir, rfInfo.Mode())
+		if err != nil {
+			fmt.Println("get check dir error:", err)
+			return
 		}
 		//
 		w := sc.client.Walk(rdir)
@@ -75,43 +57,78 @@ func (sc *sftpClient) get(args []string) {
 				continue
 			}
 			if w.Stat().IsDir() {
-				err = os.Mkdir(strings.Replace(w.Path(), rdir, downloadDir, -1), rfInfo.Mode())
+				err = os.Mkdir(strings.Replace(w.Path(), rdir, downloadDir, -1), w.Stat().Mode())
 				if err != nil {
 					fmt.Println("get making dir error:", err)
+					continue
 				}
 			} else {
-				// if remote path is a file, copy it
-				localFile, err := os.OpenFile(strings.Replace(w.Path(), rdir, downloadDir, 1), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, w.Stat().Mode())
-				if err != nil {
-					fmt.Println("open local file error:", err)
-				}
-				remoteTmpFile, err := sc.client.Open(w.Path())
-				if err != nil {
-					fmt.Println("open remote file error:", err)
-				}
-				//
-				rfTempInfo, _ := remoteTmpFile.Stat()
-				sc.pb = pb.New64(rfTempInfo.Size())
-				sc.pb.Start()
-				//
-				buf := make([]byte, 32*1024)
-				for {
-					n, err := remoteTmpFile.Read(buf)
-					if n > 0 {
-						sc.pb.Add(n)
-					}
-					if err != nil {
-						if err != io.EOF {
-							fmt.Println("downloading remote file error:", err)
-						}
-						break
-					}
-				}
-				sc.pb.Finish()
-				// 关闭
-				_ = remoteTmpFile.Close()
-				_ = localFile.Close()
+				target := strings.Replace(w.Path(), rdir, downloadDir, 1)
+				sc.download(w.Path(), target, w.Stat().Mode())
 			}
 		}
+	} else { // remote is file
+		err := sc.checkDir(downloadDir, 0644) // drw--w--w-
+		if err != nil {
+			fmt.Println("get check dir error:", err)
+			return
+		}
+		target := filepath.Join(downloadDir, rfInfo.Name())
+		sc.download(rdir, target, rfInfo.Mode())
 	}
+}
+
+func (sc *sftpClient) checkDir(targetDir string, mode os.FileMode) error {
+	_, err := os.Stat(targetDir)
+	// if local dir not exist, we will create a local dir
+	// with the same name as the remote dir
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(targetDir, mode)
+			if err != nil {
+				fmt.Println("get -> making dir error")
+				return err
+			}
+		}
+	} else {
+		return errors.New("文件夹已存在是否覆盖")
+	}
+	return nil
+}
+
+func (sc *sftpClient) download(src, target string, fm os.FileMode) {
+	// if remote path is a file, copy it
+	targetFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, fm)
+	if err != nil {
+		fmt.Println("open local file error:", err)
+		return
+	}
+	defer targetFile.Close()
+	//
+	srcFile, err := sc.client.Open(src)
+	if err != nil {
+		fmt.Println("open remote file error:", err)
+		return
+	}
+	defer srcFile.Close()
+	//
+	srcFileInfo, _ := srcFile.Stat()
+	sc.NewProcessBar(srcFileInfo.Name(), srcFileInfo.Size())
+	sc.pb.Start()
+	//
+	buf := make([]byte, 32*1024)
+	for {
+		n, err := srcFile.Read(buf)
+		if n > 0 {
+			sc.pb.Add(n)
+			targetFile.Write(buf[:n])
+		}
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println("downloading remote file error:", err)
+			}
+			break
+		}
+	}
+	sc.pb.Finish()
 }
