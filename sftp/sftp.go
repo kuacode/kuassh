@@ -10,7 +10,6 @@ import (
 
 	"github.com/c-bata/go-prompt/completer"
 	"github.com/cheggaaa/pb/v3"
-	"github.com/chzyer/readline"
 	"github.com/kuassh"
 	"github.com/kuassh/pkg/go-prompt"
 	kssh "github.com/kuassh/ssh"
@@ -32,10 +31,9 @@ type sftpClient struct {
 	rUserHome string
 	rWorkDir  string
 	// 本地
-	lUserHome string
-	lWorkDir  string
-	pb        *pb.ProgressBar
-	Instance  *readline.Instance
+	lUserHome   string
+	lWorkDir    string
+	progressBar *bar
 }
 
 func NewSftpClient() *sftpClient {
@@ -46,6 +44,8 @@ func NewSftpClient() *sftpClient {
 	return &sftpClient{
 		lUserHome: homeDir,
 		lWorkDir:  homeDir,
+		// progressBar
+		progressBar: new(bar),
 	}
 }
 
@@ -115,6 +115,8 @@ func (sc *sftpClient) executor(line string) {
 		sc.lls(cmds)
 	case cmds[0] == "get":
 		sc.get(cmds)
+	case cmds[0] == "put":
+		sc.put(cmds)
 	case cmds[0] == "sleep":
 		fmt.Println("sleep 4 second")
 		time.Sleep(4 * time.Second)
@@ -164,14 +166,34 @@ func (sc *sftpClient) completer(d prompt.Document) []prompt.Suggest {
 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
 }
 
+type bar struct {
+	pb *pb.ProgressBar
+}
+
 // 创建PB
-func (sc *sftpClient) NewProcessBar(name string, total int64) {
-	sc.pb = pb.New64(total)
-	sc.pb.SetWriter(os.Stdout)
-	sc.pb.Set(pb.Bytes, true)
-	sc.pb.SetWidth(100)
+func (b *bar) NewBar(name string, total int64) {
+	if b.pb == nil {
+		b.pb = new(pb.ProgressBar)
+		b.pb.SetWriter(os.Stdout)
+		b.pb.Set(pb.Bytes, true)
+		b.pb.SetWidth(100)
+	}
+	b.pb.SetTotal(total)
+	b.pb.SetCurrent(0)
 	// todo 设置输出字符
 	//tmpl := `{{ counters . "%s/%s" "%s/?"}} {{ bar . "[" "=" (cycle . ">" ) "." "]"}} {{speed . | rndcolor }} {{percent .}} {{rtime . "%s" "%s" "???"}} {{string . "my_green_string" | green}} {{string . "my_blue_string" | blue}}`
 	tmpl := name + ` {{ counters . "%s/%s" "%s/?"}} {{ bar . "[" "=" (cycle . ">" ) "." "]"}} {{speed .}} {{percent .}} {{rtime . "%s" "%s" "???"}}`
-	sc.pb.SetTemplateString(tmpl)
+	b.pb.SetTemplateString(tmpl)
+}
+
+func (b *bar) Write(p []byte) (int, error) {
+	n := len(p)
+	b.pb.Add(n)
+	return n, nil
+}
+
+func (b *bar) Read(p []byte) (int, error) {
+	n := len(p)
+	b.pb.Add(n)
+	return n, nil
 }

@@ -44,7 +44,7 @@ func (sc *sftpClient) get(args []string) {
 	if rfInfo.IsDir() {
 		// local file
 		downloadDir := filepath.Join(downloadDir, filepath.Base(rdir))
-		err := sc.checkDir(downloadDir, rfInfo.Mode())
+		err := sc.getCheckDir(downloadDir, rfInfo.Mode())
 		if err != nil {
 			fmt.Println("get check dir error:", err)
 			return
@@ -68,7 +68,7 @@ func (sc *sftpClient) get(args []string) {
 			}
 		}
 	} else { // remote is file
-		err := sc.checkDir(downloadDir, 0644) // drw--w--w-
+		err := sc.getCheckDir(downloadDir, 0644) // drw--w--w-
 		if err != nil {
 			fmt.Println("get check dir error:", err)
 			return
@@ -78,7 +78,7 @@ func (sc *sftpClient) get(args []string) {
 	}
 }
 
-func (sc *sftpClient) checkDir(targetDir string, mode os.FileMode) error {
+func (sc *sftpClient) getCheckDir(targetDir string, mode os.FileMode) error {
 	_, err := os.Stat(targetDir)
 	// if local dir not exist, we will create a local dir
 	// with the same name as the remote dir
@@ -93,17 +93,10 @@ func (sc *sftpClient) checkDir(targetDir string, mode os.FileMode) error {
 	} else {
 		return errors.New("文件夹已存在是否覆盖")
 	}
-	return nil
+	return err
 }
 
 func (sc *sftpClient) download(src, target string, fm os.FileMode) {
-	// if remote path is a file, copy it
-	targetFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, fm)
-	if err != nil {
-		fmt.Println("open local file error:", err)
-		return
-	}
-	defer targetFile.Close()
 	//
 	srcFile, err := sc.client.Open(src)
 	if err != nil {
@@ -111,24 +104,21 @@ func (sc *sftpClient) download(src, target string, fm os.FileMode) {
 		return
 	}
 	defer srcFile.Close()
-	//
-	srcFileInfo, _ := srcFile.Stat()
-	sc.NewProcessBar(srcFileInfo.Name(), srcFileInfo.Size())
-	sc.pb.Start()
-	//
-	buf := make([]byte, 32*1024)
-	for {
-		n, err := srcFile.Read(buf)
-		if n > 0 {
-			sc.pb.Add(n)
-			targetFile.Write(buf[:n])
-		}
-		if err != nil {
-			if err != io.EOF {
-				fmt.Println("downloading remote file error:", err)
-			}
-			break
-		}
+	sinfo, err := srcFile.Stat()
+	if err != nil {
+		fmt.Println("stat local file error:", err)
+		return
 	}
-	sc.pb.Finish()
+	//
+	targetFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, fm)
+	if err != nil {
+		fmt.Println("open local file error:", err)
+		return
+	}
+	defer targetFile.Close()
+
+	sc.progressBar.NewBar(sinfo.Name(), sinfo.Size())
+	sc.progressBar.pb.Start()
+	io.Copy(io.MultiWriter(sc.progressBar, targetFile), srcFile)
+	sc.progressBar.pb.Finish()
 }
