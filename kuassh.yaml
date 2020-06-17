@@ -49,6 +49,6 @@
 
 - name: V
   user: root
-  host: 127.0.0.1
-  port: 2222
-  password: 123456
+  host: 172.25.17.87
+  port: 22
+  password: 6789@jkl
