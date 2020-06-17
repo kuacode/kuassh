@@ -9,8 +9,8 @@ import (
 	"os"
 )
 
-var ksftpCmd = &cobra.Command{
-	Use:   "ksftp",
+var kuasftpCmd = &cobra.Command{
+	Use:   "kuasftp",
 	Short: "sftp",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -19,7 +19,7 @@ var ksftpCmd = &cobra.Command{
 }
 
 func SftpExecute() {
-	if err := ksftpCmd.Execute(); err != nil {
+	if err := kuasftpCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

@@ -9,7 +9,7 @@
             "type": "go",
             "request": "attach",
             "mode": "local",
-            "processId": 18912
+            "processId": 6588
         },
         {
             "name": "Launch",

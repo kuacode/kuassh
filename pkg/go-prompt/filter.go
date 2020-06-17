@@ -54,8 +54,17 @@ func filterSuggestions(suggestions []Suggest, sub string, ignoreCase bool, funct
 	//	return suggestions
 	//}
 	// 目前改为空字串不提示，后续改成可配
+	var hasPre = false
+	if strings.HasPrefix(sub, "_kua_") {
+		sub = sub[5:]
+		hasPre = true
+	}
 	if sub == "" {
-		return suggestions[:0]
+		if hasPre {
+			return suggestions
+		} else {
+			return suggestions[:0]
+		}
 	}
 	if ignoreCase {
 		sub = strings.ToUpper(sub)
