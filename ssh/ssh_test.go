@@ -7,10 +7,10 @@ import (
 
 func TestNewClient(t *testing.T) {
 	n := &kuassh.Node{
-		Host:     "149.28.25.177",
+		Host:     "127.0.0.1",
 		Port:     "22",
 		User:     "root",
-		PassWord: "%9aA-jR1[973FBn$",
+		PassWord: "123456",
 		KeyFile:  "",
 		Cmds:     nil,
 	}
